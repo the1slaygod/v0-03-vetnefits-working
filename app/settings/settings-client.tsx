@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useTransition } from "react"
+import { useState, useTransition } from "react";
 import {
   FaClinicMedical,
   FaCreditCard,
@@ -13,133 +13,157 @@ import {
   FaTimes,
   FaPlus,
   FaTrash,
-} from "react-icons/fa"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
+} from "react-icons/fa";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ClinicSettings {
-  clinic_name: string
-  clinic_phone: string
-  clinic_email: string
-  clinic_address: string
-  clinic_logo: string
-  subscription_status: "active" | "inactive" | "trial"
-  subscription_plan: "monthly" | "yearly"
-  subscription_valid_till: string
-  theme: "light" | "dark"
-  default_view: "dashboard" | "appointments" | "admit"
+  clinic_name: string;
+  clinic_phone: string;
+  clinic_email: string;
+  clinic_address: string;
+  clinic_logo: string;
+  subscription_status: "active" | "inactive" | "trial";
+  subscription_plan: "monthly" | "yearly";
+  subscription_valid_till: string;
+  theme: "light" | "dark";
+  default_view: "dashboard" | "appointments" | "admit";
   modules: {
-    vaccines: boolean
-    compliance: boolean
-    lab_reports: boolean
-    otc_billing: boolean
-  }
+    vaccines: boolean;
+    compliance: boolean;
+    lab_reports: boolean;
+    otc_billing: boolean;
+  };
 }
 
 interface StaffMember {
-  id: string
-  name: string
-  email: string
-  role: "doctor" | "receptionist" | "admin"
-  status: "active" | "inactive"
-  created_at: string
+  id: string;
+  name: string;
+  email: string;
+  role: "doctor" | "receptionist" | "admin";
+  status: "active" | "inactive";
+  created_at: string;
 }
 
 interface SettingsClientProps {
-  initialSettings: ClinicSettings
-  initialStaff: StaffMember[]
-  saveSettings: (formData: FormData) => Promise<{ success: boolean; message: string }>
-  addStaff: (formData: FormData) => Promise<{ success: boolean; message: string }>
-  toggleStaffStatus: (staffId: string, currentStatus: string) => Promise<{ success: boolean; message: string }>
-  deleteStaff: (staffId: string) => Promise<{ success: boolean; message: string }>
+  initialSettings: ClinicSettings;
+  initialStaff: StaffMember[];
 }
 
 export default function SettingsClient({
   initialSettings,
   initialStaff,
-  saveSettings,
-  addStaff,
-  toggleStaffStatus,
-  deleteStaff,
 }: SettingsClientProps) {
-  const [activeTab, setActiveTab] = useState("clinic")
-  const [settings, setSettings] = useState<ClinicSettings>(initialSettings)
-  const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
-  const [showPassword, setShowPassword] = useState(false)
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [showAddStaff, setShowAddStaff] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [activeTab, setActiveTab] = useState("clinic");
+  const [settings, setSettings] = useState<ClinicSettings>(initialSettings);
+  const [staff, setStaff] = useState<StaffMember[]>(initialStaff);
+  const [showPassword, setShowPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const { toast } = useToast()
+  const { toast } = useToast();
 
   const handleSaveSettings = async (formData: FormData) => {
     startTransition(async () => {
-      const result = await saveSettings(formData)
+      const data: any = Object.fromEntries(formData.entries());
+      // Convert module toggles
+      data.modules = {
+        vaccines: formData.get("modules_vaccines") === "on",
+        compliance: formData.get("modules_compliance") === "on",
+        lab_reports: formData.get("modules_lab_reports") === "on",
+        otc_billing: formData.get("modules_otc_billing") === "on",
+      };
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive",
-      })
-    })
-  }
+      });
+    });
+  };
 
   const handleAddStaff = async (formData: FormData) => {
     startTransition(async () => {
-      const result = await addStaff(formData)
+      const data: any = Object.fromEntries(formData.entries());
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
       if (result.success) {
-        setShowAddStaff(false)
-        // Refresh the page to show new staff member
-        window.location.reload()
+        setShowAddStaff(false);
+        window.location.reload();
       }
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive",
-      })
-    })
-  }
+      });
+    });
+  };
 
-  const handleToggleStaffStatus = async (staffId: string, currentStatus: string) => {
+  const handleToggleStaffStatus = async (
+    staffId: string,
+    currentStatus: string
+  ) => {
     startTransition(async () => {
-      const result = await toggleStaffStatus(staffId, currentStatus)
+      const newStatus = currentStatus === "active" ? "inactive" : "active";
+      const res = await fetch("/api/staff", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffId, status: newStatus }),
+      });
+      const result = await res.json();
       if (result.success) {
         setStaff((prev) =>
           prev.map((member) =>
-            member.id === staffId ? { ...member, status: currentStatus === "active" ? "inactive" : "active" } : member,
-          ),
-        )
+            member.id === staffId ? { ...member, status: newStatus } : member
+          )
+        );
       }
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive",
-      })
-    })
-  }
+      });
+    });
+  };
 
   const handleDeleteStaff = async (staffId: string) => {
-    if (!confirm("Are you sure you want to delete this staff member?")) return
+    if (!confirm("Are you sure you want to delete this staff member?")) return;
 
     startTransition(async () => {
-      const result = await deleteStaff(staffId)
+      const res = await fetch("/api/staff", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffId }),
+      });
+      const result = await res.json();
       if (result.success) {
-        setStaff((prev) => prev.filter((member) => member.id !== staffId))
+        setStaff((prev) => prev.filter((member) => member.id !== staffId));
       }
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
         variant: result.success ? "default" : "destructive",
-      })
-    })
-  }
+      });
+    });
+  };
 
   const changePassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -147,8 +171,8 @@ export default function SettingsClient({
         title: "Error",
         description: "Passwords do not match",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (newPassword.length < 6) {
@@ -156,25 +180,31 @@ export default function SettingsClient({
         title: "Error",
         description: "Password must be at least 6 characters",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     // This would typically integrate with your auth system
     toast({
       title: "Info",
       description: "Password change functionality requires auth integration",
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your clinic settings and preferences</p>
+        <p className="text-gray-600 mt-2">
+          Manage your clinic settings and preferences
+        </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="clinic" className="flex items-center space-x-2">
             <FaClinicMedical className="w-4 h-4" />
@@ -188,7 +218,10 @@ export default function SettingsClient({
             <FaUsers className="w-4 h-4" />
             <span>Access</span>
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center space-x-2">
+          <TabsTrigger
+            value="appearance"
+            className="flex items-center space-x-2"
+          >
             <FaPalette className="w-4 h-4" />
             <span>Appearance</span>
           </TabsTrigger>
@@ -285,23 +318,28 @@ export default function SettingsClient({
                         settings.subscription_status === "active"
                           ? "default"
                           : settings.subscription_status === "trial"
-                            ? "secondary"
-                            : "destructive"
+                          ? "secondary"
+                          : "destructive"
                       }
                     >
-                      {settings.subscription_status.toUpperCase()}
+                      {(settings.subscription_status || "").toUpperCase() ||
+                        "UNKNOWN"}
                     </Badge>
                   </div>
                 </div>
                 <div>
                   <Label>Plan</Label>
-                  <p className="mt-2 font-medium capitalize">{settings.subscription_plan}</p>
+                  <p className="mt-2 font-medium capitalize">
+                    {settings.subscription_plan}
+                  </p>
                 </div>
                 <div>
                   <Label>Valid Till</Label>
                   <p className="mt-2 font-medium">
                     {settings.subscription_valid_till
-                      ? new Date(settings.subscription_valid_till).toLocaleDateString("en-IN")
+                      ? new Date(
+                          settings.subscription_valid_till
+                        ).toLocaleDateString("en-IN")
                       : "N/A"}
                   </p>
                 </div>
@@ -393,11 +431,22 @@ export default function SettingsClient({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <Label htmlFor="staff_name">Name</Label>
-                          <Input id="staff_name" name="name" placeholder="Enter name" required />
+                          <Input
+                            id="staff_name"
+                            name="name"
+                            placeholder="Enter name"
+                            required
+                          />
                         </div>
                         <div>
                           <Label htmlFor="staff_email">Email</Label>
-                          <Input id="staff_email" name="email" type="email" placeholder="Enter email" required />
+                          <Input
+                            id="staff_email"
+                            name="email"
+                            type="email"
+                            placeholder="Enter email"
+                            required
+                          />
                         </div>
                         <div>
                           <Label htmlFor="staff_role">Role</Label>
@@ -417,7 +466,11 @@ export default function SettingsClient({
                         <Button type="submit" disabled={isPending}>
                           {isPending ? "Adding..." : "Add Staff"}
                         </Button>
-                        <Button type="button" variant="outline" onClick={() => setShowAddStaff(false)}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowAddStaff(false)}
+                        >
                           Cancel
                         </Button>
                       </div>
@@ -427,7 +480,10 @@ export default function SettingsClient({
 
                 <div className="space-y-4">
                   {staff.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
                       <div>
                         <p className="font-medium">{member.name}</p>
                         <p className="text-sm text-gray-600">{member.email}</p>
@@ -436,14 +492,26 @@ export default function SettingsClient({
                         </Badge>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant={member.status === "active" ? "default" : "secondary"}>{member.status}</Badge>
+                        <Badge
+                          variant={
+                            member.status === "active" ? "default" : "secondary"
+                          }
+                        >
+                          {member.status}
+                        </Badge>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleToggleStaffStatus(member.id, member.status)}
+                          onClick={() =>
+                            handleToggleStaffStatus(member.id, member.status)
+                          }
                           disabled={isPending}
                         >
-                          {member.status === "active" ? <FaTimes /> : <FaCheck />}
+                          {member.status === "active" ? (
+                            <FaTimes />
+                          ) : (
+                            <FaCheck />
+                          )}
                         </Button>
                         <Button
                           variant="outline"
@@ -484,11 +552,21 @@ export default function SettingsClient({
                   <Label>Theme</Label>
                   <div className="flex items-center space-x-4 mt-2">
                     <label className="flex items-center space-x-2">
-                      <input type="radio" name="theme" value="light" defaultChecked={settings.theme === "light"} />
+                      <input
+                        type="radio"
+                        name="theme"
+                        value="light"
+                        defaultChecked={settings.theme === "light"}
+                      />
                       <span>Light</span>
                     </label>
                     <label className="flex items-center space-x-2">
-                      <input type="radio" name="theme" value="dark" defaultChecked={settings.theme === "dark"} />
+                      <input
+                        type="radio"
+                        name="theme"
+                        value="dark"
+                        defaultChecked={settings.theme === "dark"}
+                      />
                       <span>Dark</span>
                     </label>
                   </div>
@@ -510,7 +588,9 @@ export default function SettingsClient({
                         type="radio"
                         name="default_view"
                         value="appointments"
-                        defaultChecked={settings.default_view === "appointments"}
+                        defaultChecked={
+                          settings.default_view === "appointments"
+                        }
                       />
                       <span>Appointments</span>
                     </label>
@@ -541,7 +621,9 @@ export default function SettingsClient({
                 <FaCogs className="mr-2" />
                 Module Settings
               </CardTitle>
-              <p className="text-sm text-gray-600">Enable or disable modules for your clinic</p>
+              <p className="text-sm text-gray-600">
+                Enable or disable modules for your clinic
+              </p>
             </CardHeader>
             <CardContent>
               <form action={handleSaveSettings} className="space-y-6">
@@ -549,30 +631,50 @@ export default function SettingsClient({
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h3 className="font-medium">Vaccine Module</h3>
-                      <p className="text-sm text-gray-600">Manage pet vaccinations and schedules</p>
+                      <p className="text-sm text-gray-600">
+                        Manage pet vaccinations and schedules
+                      </p>
                     </div>
-                    <Switch name="modules_vaccines" defaultChecked={settings.modules.vaccines} />
+                    <Switch
+                      name="modules_vaccines"
+                      defaultChecked={settings.modules?.vaccines ?? false}
+                    />
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h3 className="font-medium">Compliance</h3>
-                      <p className="text-sm text-gray-600">Track compliance and regulatory requirements</p>
+                      <p className="text-sm text-gray-600">
+                        Track compliance and regulatory requirements
+                      </p>
                     </div>
-                    <Switch name="modules_compliance" defaultChecked={settings.modules.compliance} />
+                    <Switch
+                      name="modules_compliance"
+                      defaultChecked={settings.modules?.compliance ?? false}
+                    />
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h3 className="font-medium">Lab Reports</h3>
-                      <p className="text-sm text-gray-600">Manage laboratory test results</p>
+                      <p className="text-sm text-gray-600">
+                        Manage laboratory test results
+                      </p>
                     </div>
-                    <Switch name="modules_lab_reports" defaultChecked={settings.modules.lab_reports} />
+                    <Switch
+                      name="modules_lab_reports"
+                      defaultChecked={settings.modules?.lab_reports ?? false}
+                    />
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h3 className="font-medium">OTC Billing</h3>
-                      <p className="text-sm text-gray-600">Over-the-counter sales and billing</p>
+                      <p className="text-sm text-gray-600">
+                        Over-the-counter sales and billing
+                      </p>
                     </div>
-                    <Switch name="modules_otc_billing" defaultChecked={settings.modules.otc_billing} />
+                    <Switch
+                      name="modules_otc_billing"
+                      defaultChecked={settings.modules?.otc_billing ?? false}
+                    />
                   </div>
                 </div>
                 <Button type="submit" disabled={isPending}>
@@ -584,5 +686,5 @@ export default function SettingsClient({
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
