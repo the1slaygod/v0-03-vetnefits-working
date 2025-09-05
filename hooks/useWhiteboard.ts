@@ -6,10 +6,15 @@ import { createClient } from "@supabase/supabase-js"
 import type { WhiteboardRow, WhiteboardFilters } from "@/lib/types/whiteboard"
 
 // Create Supabase client for realtime subscriptions
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-)
+const supabase = 
+  typeof window !== "undefined" && 
+  process.env.NEXT_PUBLIC_SUPABASE_URL && 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ? createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      )
+    : null
 
 // Fetch whiteboard data with realtime subscriptions
 export function useWhiteboard(filters: WhiteboardFilters) {
@@ -39,7 +44,7 @@ export function useWhiteboard(filters: WhiteboardFilters) {
   
   // Set up realtime subscription for appointment changes
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (!supabase) {
       return // Skip realtime if Supabase is not configured
     }
     
@@ -61,7 +66,9 @@ export function useWhiteboard(filters: WhiteboardFilters) {
       .subscribe()
     
     return () => {
-      supabase.removeChannel(channel)
+      if (supabase) {
+        supabase.removeChannel(channel)
+      }
     }
   }, [queryClient, filters])
   
