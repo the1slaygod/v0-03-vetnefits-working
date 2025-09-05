@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar } from "@/components/ui/avatar"
-import { Clock, Eye, EyeOff } from "lucide-react"
+import { Clock, Eye, EyeOff, Receipt, DollarSign } from "lucide-react"
 import type { WhiteboardRow } from "@/lib/types/whiteboard"
 import { StatusMenu } from "./StatusMenu"
 import { PhotoUploadCell } from "./PhotoUploadCell"
@@ -34,6 +34,7 @@ export function WhiteboardTable({
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [showColumnToggle, setShowColumnToggle] = useState(false)
+  const [selectedPatientForBilling, setSelectedPatientForBilling] = useState<WhiteboardRow | null>(null)
 
   // Helper function to get status badge color
   const getStatusColor = (status: string) => {
@@ -293,8 +294,19 @@ export function WhiteboardTable({
       {
         id: "readyForInvoice",
         header: "Ready For Invoice",
-        cell: () => (
-          <div className="text-center text-muted-foreground text-sm">0.00</div>
+        cell: ({ row }) => (
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-muted-foreground text-sm">0.00</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedPatientForBilling(row.original)}
+              className="h-6 w-6 p-0 hover:bg-blue-50"
+              title="Create Invoice"
+            >
+              <Receipt className="h-4 w-4 text-blue-600" />
+            </Button>
+          </div>
         ),
         size: 140,
       },
@@ -414,6 +426,106 @@ export function WhiteboardTable({
           </tbody>
         </table>
       </div>
+
+      {/* Billing Modal */}
+      {selectedPatientForBilling && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-blue-600" />
+                Create Invoice - {selectedPatientForBilling.patient}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedPatientForBilling(null)}
+                className="h-8 w-8 p-0"
+              >
+                ×
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Patient Info */}
+              <div className="bg-muted/30 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Client:</span> {selectedPatientForBilling.client}
+                  </div>
+                  <div>
+                    <span className="font-medium">Patient:</span> {selectedPatientForBilling.patient}
+                  </div>
+                  <div>
+                    <span className="font-medium">Appointment:</span> {selectedPatientForBilling.apptType}
+                  </div>
+                  <div>
+                    <span className="font-medium">Provider:</span> {selectedPatientForBilling.provider}
+                  </div>
+                </div>
+              </div>
+
+              {/* Services Section */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Services & Charges
+                </h4>
+                
+                <div className="space-y-3">
+                  {/* Service Items */}
+                  <div className="flex items-center justify-between p-3 bg-muted/20 rounded">
+                    <div>
+                      <div className="font-medium">{selectedPatientForBilling.apptType}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {selectedPatientForBilling.complaint}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">$75.00</div>
+                      <div className="text-xs text-muted-foreground">Base charge</div>
+                    </div>
+                  </div>
+
+                  {/* Add Service Button */}
+                  <Button variant="outline" className="w-full">
+                    + Add Service or Product
+                  </Button>
+                </div>
+
+                {/* Total Section */}
+                <div className="border-t pt-3 mt-4">
+                  <div className="flex justify-between items-center text-lg font-semibold">
+                    <span>Total:</span>
+                    <span className="text-blue-600">$75.00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => setSelectedPatientForBilling(null)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Save Draft
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Handle invoice creation
+                    alert(`Invoice created for ${selectedPatientForBilling.patient} - $75.00`)
+                    setSelectedPatientForBilling(null)
+                  }}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Create Invoice
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
