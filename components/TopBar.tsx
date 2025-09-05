@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { FaBell, FaUser, FaSearch, FaBars, FaTimes } from "react-icons/fa"
+import { FaBell, FaUser, FaSearch, FaBars, FaTimes, FaAngleLeft, FaAngleRight } from "react-icons/fa"
 import { useClinicContext } from "@/lib/supabase-realtime"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 interface TopBarProps {
   onMenuToggle: () => void
+  onSidebarToggle?: () => void
   isMobileMenuOpen: boolean
+  isSidebarCollapsed?: boolean
+  isMobile?: boolean
 }
 
-export default function TopBar({ onMenuToggle, isMobileMenuOpen }: TopBarProps) {
+export default function TopBar({ onMenuToggle, onSidebarToggle, isMobileMenuOpen, isSidebarCollapsed = false, isMobile = false }: TopBarProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const clinicContext = useClinicContext()
   const router = useRouter()
@@ -37,11 +40,19 @@ export default function TopBar({ onMenuToggle, isMobileMenuOpen }: TopBarProps) 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 py-3">
-        {/* Left Section - Mobile Menu Toggle */}
-        <div className="flex items-center space-x-4">
+        {/* Left Section - Menu Toggles */}
+        <div className="flex items-center space-x-2">
+          {/* Mobile Menu Toggle */}
           <Button variant="ghost" size="sm" onClick={onMenuToggle} className="lg:hidden">
             {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
           </Button>
+          
+          {/* Desktop Sidebar Toggle */}
+          {!isMobile && onSidebarToggle && (
+            <Button variant="ghost" size="sm" onClick={onSidebarToggle} className="hidden lg:flex">
+              {isSidebarCollapsed ? <FaAngleRight /> : <FaAngleLeft />}
+            </Button>
+          )}
 
           {/* Clinic Logo and Name - Hidden on mobile */}
           <div className="hidden md:flex items-center space-x-3">
