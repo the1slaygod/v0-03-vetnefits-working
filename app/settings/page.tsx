@@ -1,6 +1,6 @@
-"use client"
 import { createClient } from "@supabase/supabase-js"
 import SettingsClient from "./settings-client"
+import { saveSettings, addStaff, toggleStaffStatus, deleteStaff } from "./actions"
 
 interface ClinicSettings {
   clinic_name: string
@@ -121,130 +121,7 @@ async function getClinicSettings() {
   }
 }
 
-async function saveSettings(formData: FormData) {
-  "use server"
-
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase configuration missing")
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const clinicId = "default-clinic-id"
-
-    const settings = {
-      clinic_id: clinicId,
-      clinic_name: formData.get("clinic_name") as string,
-      clinic_phone: formData.get("clinic_phone") as string,
-      clinic_email: formData.get("clinic_email") as string,
-      clinic_address: formData.get("clinic_address") as string,
-      clinic_logo: formData.get("clinic_logo") as string,
-      theme: formData.get("theme") as string,
-      default_view: formData.get("default_view") as string,
-      modules: {
-        vaccines: formData.get("modules_vaccines") === "on",
-        compliance: formData.get("modules_compliance") === "on",
-        lab_reports: formData.get("modules_lab_reports") === "on",
-        otc_billing: formData.get("modules_otc_billing") === "on",
-      },
-      updated_at: new Date().toISOString(),
-    }
-
-    const { error } = await supabase.from("clinic_settings").upsert(settings, { onConflict: "clinic_id" })
-
-    if (error) throw error
-
-    return { success: true, message: "Settings saved successfully" }
-  } catch (error) {
-    console.error("Error saving settings:", error)
-    return { success: false, message: "Failed to save settings" }
-  }
-}
-
-async function addStaff(formData: FormData) {
-  "use server"
-
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase configuration missing")
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const clinicId = "default-clinic-id"
-
-    const { error } = await supabase.from("clinic_staff").insert({
-      clinic_id: clinicId,
-      name: formData.get("name") as string,
-      email: formData.get("email") as string,
-      role: formData.get("role") as string,
-      status: "active",
-    })
-
-    if (error) throw error
-
-    return { success: true, message: "Staff member added successfully" }
-  } catch (error) {
-    console.error("Error adding staff:", error)
-    return { success: false, message: "Failed to add staff member" }
-  }
-}
-
-async function toggleStaffStatus(staffId: string, currentStatus: string) {
-  "use server"
-
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase configuration missing")
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const newStatus = currentStatus === "active" ? "inactive" : "active"
-
-    const { error } = await supabase.from("clinic_staff").update({ status: newStatus }).eq("id", staffId)
-
-    if (error) throw error
-
-    return { success: true, message: `Staff member ${newStatus}` }
-  } catch (error) {
-    console.error("Error updating staff status:", error)
-    return { success: false, message: "Failed to update staff status" }
-  }
-}
-
-async function deleteStaff(staffId: string) {
-  "use server"
-
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Supabase configuration missing")
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-    const { error } = await supabase.from("clinic_staff").delete().eq("id", staffId)
-
-    if (error) throw error
-
-    return { success: true, message: "Staff member deleted successfully" }
-  } catch (error) {
-    console.error("Error deleting staff:", error)
-    return { success: false, message: "Failed to delete staff member" }
-  }
-}
-
-export default async function Settings() {
+export default async function SettingsPage() {
   const { settings, staff } = await getClinicSettings()
 
   return (
