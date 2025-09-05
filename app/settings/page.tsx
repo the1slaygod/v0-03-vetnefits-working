@@ -35,7 +35,10 @@ async function getClinicSettings() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    // Check if we have a valid Supabase URL format
+    const isValidUrl = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseUrl.includes('.supabase.co')
+    
+    if (!supabaseUrl || !supabaseAnonKey || !isValidUrl) {
       return {
         settings: {
           clinic_name: "Vetnefits Animal Hospital",
