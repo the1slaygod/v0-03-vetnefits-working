@@ -1,0 +1,110 @@
+3) Backend endpoints (create if missing)
+
+Implement minimal API so the table works:
+	•	GET /api/whiteboard?date=YYYY-MM-DD&providerId=...&apptType=...&q=...&show=all|clients
+	•	Returns { rows: WhiteboardRow[] } for that date (start/end of day in clinic TZ).
+	•	PUT /api/whiteboard/:id/status  { status: ApptStatus }
+	•	Also sets the proper timestamp:
+	•	→ attending ⇒ attendingAtISO = now()
+	•	→ completed ⇒ completedAtISO = now()
+	•	PUT /api/whiteboard/:id/photo    (multipart/form-data or { fileUrl })
+	•	Optional: GET /api/providers and GET /api/appt-types for filters.
+
+Mapping to DB: rows derive from your appointments table joined to clients, pets, users (doctors), and a billing/invoices aggregate for counts/amount. Use UTC in DB; convert to clinic TZ on the server response.
+
+⸻
+
+4) Toolbar UI (like screenshot top bar)
+
+WhiteboardToolbar.tsx
+	•	Left area:
+	•	Date picker (defaults to Today; arrows « » to move day)
+	•	“Show Clients” select → values: All / Only Clients (matches screenshot dropdown, can be a filter you already use)
+	•	Provider select (All Providers + list)
+	•	Appointment Type select (All + list)
+	•	Right area:
+	•	Search input (“Search Client/Patient”)
+	•	A small “Fullscreen” button that toggles widescreen CSS (optional)
+	•	Debounce search 300ms; push filters to URL; trigger refetch.
+
+⸻
+
+5) Table UI (compact dense whiteboard)
+
+WhiteboardTable.tsx
+	•	Use TanStack Table v8 with column defs:
+	1.	Status (red pill when attending, grey when waiting; use StatusMenu for changes)
+	2.	Appt Time (HH:mm; blink cell if within ±5 min of now)
+	3.	Checked In (HH:mm or “—”)
+	4.	Client (name link → client page; phone icon tel:; small secondary line with masked phone)
+	5.	Patient (name link → patient/EMR; small code/id below)
+	6.	Photo (PhotoUploadCell → upload/replace; show “Upload Photo” link if empty)
+	7.	Appt Type (small text)
+	8.	Appt Confirmed (True/False chip)
+	9.	Complaint (truncate w/ tooltip)
+	10.	Provider (ProviderCell with avatar initials)
+	11.	Created By (muted)
+	12.	Waiting Time (live timer: now - checkedInAt)
+	13.	Turn Around Time (live timer:
+	•	if attending → now - attendingAt,
+	•	if completed → completedAt - attendingAt)
+	14.	Today’s Invoices (blue link with count → /billing?date=today&patient=ID)
+	15.	Active Plan (stub —)
+	16.	Cart (icon if readyForInvoice)
+	17.	Open Invoices (₹ amount, link to open invoices)
+	18.	Open For Invoice (boolean chip)
+	19.	Sno. (row index)
+	•	Table features:
+	•	Sticky header, horizontal scroll on small screens, zebra rows, dense line-height.
+	•	Row highlight when status changes in the last 10s (green flash).
+	•	Column visibility menu (three dots) to hide rarely used columns (Active Plan, Cart, etc.).
+	•	Virtualization with @tanstack/react-virtual if >200 rows.
+
+⸻
+
+6) Timers (live counters)
+
+components/waiting-board/Timers.ts
+	•	Export useLiveTimer(startISO?:string|null) that returns "HH:mm:ss" string and updates every 1s (cleanup on unmount).
+	•	For performance, run a single interval at page level and use context to tick children.
+	•	Waiting Time = diff(now, checkedInAt). Show — if not checked in.
+	•	Turn Around Time =
+	•	if status==='attending' → diff(now, attendingAt)
+	•	if status==='completed' → diff(completedAt, attendingAt)
+	•	else —
+
+⸻
+
+7) Status change menu
+
+StatusMenu.tsx
+	•	Button shows current status (e.g., Attending in red). On click shows menu:
+	•	Set to Waiting
+	•	Set to Attending (POST → timestamps attendingAtISO=now)
+	•	Set to Completed (POST → completedAtISO=now)
+	•	Set to No-show / Cancelled
+	•	Use optimistic update; rollback on error; toast results.
+
+⸻
+
+8) Photo upload cell
+
+PhotoUploadCell.tsx
+	•	If photoUrl: show thumb + “Replace”
+	•	Else: “Upload Photo”
+	•	On pick: upload to Supabase Storage bucket patient-photos/ with ${patient.id}/${uuid}.jpg, get public URL, call PUT /api/whiteboard/:id/photo.
+
+⸻
+
+9) Data fetching, mutations, realtime
+
+hooks/useWhiteboard.ts
+	•	useWhiteboard(filters: WhiteboardFilters) → fetch rows with TanStack Query; key includes date/provider/apptType/q/show.
+	•	Mutations: useUpdateStatus(id), useUpdatePhoto(id)
+	•	Realtime:
+	•	subscribeWhiteboard({ clinicId, dateISO, onRowInserted, onRowUpdated, onRowDeleted })
+	•	Subscribe to Supabase appointments (and visits if you store attending/completed there) with postgres_changes filtered by clinic_id and time range for selected day.
+	•	On event: transform into WhiteboardRow and patch the Query cache in place.
+	•	Also subscribe to a light billing_summary channel if available to refresh invoice counts for the patient.
+
+lib/realtime.ts addition

@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import AppLayout from "@/components/AppLayout"
 import { Toaster } from "@/components/ui/toaster"
+import { QueryProvider } from "@/lib/query-client"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,8 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} overflow-x-hidden`}>
-        <AppLayout>{children}</AppLayout>
-        <Toaster />
+        <QueryProvider>
+          <AppLayout>{children}</AppLayout>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   )
