@@ -1,24 +1,39 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { createClient } from "@supabase/supabase-js"
 import type { WhiteboardRow, WhiteboardFilters } from "@/lib/types/whiteboard"
-
-// Create Supabase client for realtime subscriptions
-const supabase = 
-  typeof window !== "undefined" && 
-  process.env.NEXT_PUBLIC_SUPABASE_URL && 
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      )
-    : null
 
 // Fetch whiteboard data with realtime subscriptions
 export function useWhiteboard(filters: WhiteboardFilters) {
   const queryClient = useQueryClient()
+  
+  // Create Supabase client only on client side
+  const supabase = useMemo(() => {
+    if (typeof window === "undefined") return null
+    
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!url || !anonKey) {
+      console.warn("Supabase environment variables not configured")
+      return null
+    }
+    
+    // Validate URL format
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      console.warn("Invalid Supabase URL format:", url)
+      return null
+    }
+    
+    try {
+      return createClient(url, anonKey)
+    } catch (error) {
+      console.warn("Failed to create Supabase client:", error)
+      return null
+    }
+  }, [])
   
   const query = useQuery({
     queryKey: ["whiteboard", filters],
@@ -44,8 +59,8 @@ export function useWhiteboard(filters: WhiteboardFilters) {
   
   // Set up realtime subscription for appointment changes
   useEffect(() => {
-    if (!supabase) {
-      return // Skip realtime if Supabase is not configured
+    if (!supabase || typeof window === "undefined") {
+      return // Skip realtime if Supabase is not configured or on server
     }
     
     const channel = supabase
@@ -70,7 +85,7 @@ export function useWhiteboard(filters: WhiteboardFilters) {
         supabase.removeChannel(channel)
       }
     }
-  }, [queryClient, filters])
+  }, [supabase, queryClient, filters])
   
   return query
 }
