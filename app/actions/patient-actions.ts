@@ -1,7 +1,18 @@
 "use server"
 
-import { createServerClient } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
+import { createClient } from "@supabase/supabase-js"
+
+function createServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.includes('supabase.co')) {
+    throw new Error("Supabase credentials not properly configured")
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey)
+}
 
 export interface Patient {
   id: string
@@ -73,6 +84,63 @@ export async function getAllPatients(): Promise<Patient[]> {
     return data || []
   } catch (error) {
     console.error("Error in getAllPatients:", error)
+    return []
+  }
+}
+
+export interface PatientWithPets {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  address?: string
+  pets: {
+    id: string
+    name: string
+    species: string
+    breed?: string
+    age?: number
+    gender?: string
+    weight?: number
+    color?: string
+    photo?: string
+  }[]
+}
+
+export async function getAllPatientsWithPets(): Promise<PatientWithPets[]> {
+  try {
+    const supabase = createServerClient()
+    const { data, error } = await supabase
+      .from("patients")
+      .select(`
+        id,
+        name,
+        email,
+        phone,
+        address,
+        pets (
+          id,
+          name,
+          species,
+          breed,
+          age,
+          gender,
+          weight,
+          color,
+          photo
+        )
+      `)
+      .eq("clinic_id", "ff4a1430-f7df-49b8-99bf-2240faa8d622")
+      .order("name")
+
+    if (error) {
+      console.error("Error fetching patients with pets:", error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error in getAllPatientsWithPets:", error)
     return []
   }
 }
