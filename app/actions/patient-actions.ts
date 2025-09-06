@@ -1,18 +1,12 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient } from "@supabase/supabase-js"
+import { Pool } from "pg"
 
-function createServerClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.includes('supabase.co')) {
-    throw new Error("Supabase credentials not properly configured")
-  }
-
-  return createClient(supabaseUrl, supabaseAnonKey)
-}
+// Use direct PostgreSQL connection for server actions
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+})
 
 export interface Patient {
   id: string
@@ -109,36 +103,43 @@ export interface PatientWithPets {
 
 export async function getAllPatientsWithPets(): Promise<PatientWithPets[]> {
   try {
-    const supabase = createServerClient()
-    const { data, error } = await supabase
-      .from("patients")
-      .select(`
-        id,
-        name,
-        email,
-        phone,
-        address,
-        pets (
-          id,
-          name,
-          species,
-          breed,
-          age,
-          gender,
-          weight,
-          color,
-          photo
-        )
-      `)
-      .eq("clinic_id", "ff4a1430-f7df-49b8-99bf-2240faa8d622")
-      .order("name")
+    const query = `
+      SELECT 
+        p.id,
+        p.name,
+        p.email,
+        p.phone,
+        p.address,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', pt.id,
+              'name', pt.name,
+              'species', pt.species,
+              'breed', pt.breed,
+              'age', pt.age,
+              'gender', pt.gender,
+              'weight', pt.weight,
+              'color', pt.color,
+              'photo', pt.photo
+            )
+          ) FILTER (WHERE pt.id IS NOT NULL), 
+          '[]'::json
+        ) as pets
+      FROM patients p
+      LEFT JOIN pets pt ON p.id = pt.patient_id
+      WHERE p.clinic_id = $1
+      GROUP BY p.id, p.name, p.email, p.phone, p.address
+      ORDER BY p.name
+    `
 
-    if (error) {
-      console.error("Error fetching patients with pets:", error)
-      return []
+    const client = await pool.connect()
+    try {
+      const result = await client.query(query, ["ff4a1430-f7df-49b8-99bf-2240faa8d622"])
+      return result.rows
+    } finally {
+      client.release()
     }
-
-    return data || []
   } catch (error) {
     console.error("Error in getAllPatientsWithPets:", error)
     return []
