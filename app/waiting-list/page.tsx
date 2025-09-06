@@ -1,114 +1,170 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { WhiteboardToolbar } from "@/components/waiting-list/WhiteboardToolbar"
-import { WhiteboardTable } from "@/components/waiting-list/WhiteboardTable"
-import { useWhiteboard, useUpdateStatus, useUpdatePhoto } from "@/hooks/useWhiteboard"
-import type { WhiteboardFilters } from "@/lib/types/whiteboard"
+import { Suspense } from "react"
+import { FaClock, FaPlus, FaUsers, FaExclamationTriangle, FaPlay, FaChartBar } from "react-icons/fa"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getWaitingList, getWaitingListStats } from "@/app/actions/waiting-list-actions"
+import WaitingListQueue from "./components/WaitingListQueue"
+import AddToWaitingListModal from "./components/AddToWaitingListModal"
 
 export default function WaitingListPage() {
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [filters, setFilters] = useState<WhiteboardFilters>({
-    dateISO: new Date().toISOString().split("T")[0],
-    show: "all",
-  })
-
-  // Fetch whiteboard data
-  const { data: whiteboardData = [], isLoading, error } = useWhiteboard(filters)
-  
-  // Mutations for updating status and photo
-  const updateStatusMutation = useUpdateStatus()
-  const updatePhotoMutation = useUpdatePhoto()
-
-  // Handle status update
-  const handleStatusUpdate = (id: string, status: string) => {
-    updateStatusMutation.mutate({ id, status })
-  }
-
-  // Handle photo update
-  const handlePhotoUpdate = (id: string, fileUrl: string) => {
-    updatePhotoMutation.mutate({ id, fileUrl })
-  }
-
-  // Toggle fullscreen mode
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-      setIsFullscreen(true)
-    } else {
-      document.exitFullscreen()
-      setIsFullscreen(false)
-    }
-  }
-
-  // Listen for fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-    }
-  }, [])
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Error Loading Whiteboard</h2>
-          <p className="text-muted-foreground">
-            Failed to load whiteboard data. Please check your database connection.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className={`flex flex-col h-screen ${isFullscreen ? "p-0" : ""}`}>
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Page Header */}
-      {!isFullscreen && (
-        <div className="px-6 py-4 border-b bg-background">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Patient Waiting List</h1>
-              <p className="text-muted-foreground">
-                Real-time patient whiteboard - {whiteboardData.length} appointments today
-              </p>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Last updated: {new Date().toLocaleTimeString()}
-            </div>
-          </div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <FaClock className="text-blue-600" />
+            Waiting List
+          </h1>
+          <p className="text-gray-600 mt-1">Manage patient queue and waiting times</p>
         </div>
-      )}
-
-      {/* Toolbar */}
-      <WhiteboardToolbar
-        filters={filters}
-        onFiltersChange={setFilters}
-        onFullscreenToggle={toggleFullscreen}
-      />
-
-      {/* Main Table Area */}
-      <div className="flex-1 overflow-hidden">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading appointments...</p>
-            </div>
-          </div>
-        ) : (
-          <WhiteboardTable
-            data={whiteboardData}
-            onStatusUpdate={handleStatusUpdate}
-            onPhotoUpdate={handlePhotoUpdate}
-          />
-        )}
+        <AddToWaitingListModal />
       </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FaUsers className="text-blue-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Waiting</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <WaitingListStatsCard type="waiting" />
+                </Suspense>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <FaPlay className="text-green-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">In Progress</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <WaitingListStatsCard type="inProgress" />
+                </Suspense>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <FaExclamationTriangle className="text-red-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Urgent</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <WaitingListStatsCard type="urgent" />
+                </Suspense>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <FaChartBar className="text-orange-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Avg Wait</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <WaitingListStatsCard type="avgWait" />
+                </Suspense>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs defaultValue="queue" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="queue">Current Queue</TabsTrigger>
+          <TabsTrigger value="completed">Completed Today</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="queue" className="space-y-6">
+          <Suspense fallback={<WaitingListQueueSkeleton />}>
+            <WaitingListQueue filter="active" />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="completed" className="space-y-6">
+          <Suspense fallback={<WaitingListQueueSkeleton />}>
+            <WaitingListQueue filter="completed" />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Waiting List Analytics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center text-gray-500 py-8">
+                <FaChartBar className="mx-auto text-4xl mb-4" />
+                <p>Analytics dashboard coming soon</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+async function WaitingListStatsCard({ type }: { type: string }) {
+  const stats = await getWaitingListStats()
+  
+  const getValue = () => {
+    switch (type) {
+      case "waiting":
+        return stats.waitingCount.toString()
+      case "inProgress":
+        return stats.inProgressCount.toString()
+      case "urgent":
+        return stats.urgentCount.toString()
+      case "avgWait":
+        return stats.avgWaitTime > 0 ? `${Math.round(stats.avgWaitTime)}min` : "N/A"
+      default:
+        return "0"
+    }
+  }
+
+  return <p className="text-2xl font-bold text-gray-900">{getValue()}</p>
+}
+
+function WaitingListQueueSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[...Array(5)].map((_, i) => (
+        <Card key={i} className="animate-pulse">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+              <div className="space-y-2 flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+              <div className="h-8 bg-gray-200 rounded w-20"></div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
