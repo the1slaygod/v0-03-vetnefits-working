@@ -1,271 +1,271 @@
-"use client"
+import { Suspense } from "react"
+import { FaFlask, FaPlus, FaMicroscope, FaClock, FaExclamationTriangle, FaCheckCircle } from "react-icons/fa"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getLabReports, getLabReportStats } from "@/app/actions/lab-reports-actions"
+import LabReportsList from "./components/LabReportsList"
+import CreateLabReportModal from "./components/CreateLabReportModal"
 
-import { useState } from "react"
-import { FaPlus, FaFilter, FaShare, FaEye } from "react-icons/fa"
-
-// Import components
-import LabReportsFilters from "@/components/lab-reports/LabReportsFilters"
-import ReportsList from "@/components/lab-reports/ReportsList"
-import UploadReportModal from "@/components/lab-reports/UploadReportModal"
-import AddTestResultModal from "@/components/lab-reports/AddTestResultModal"
-import ViewReportModal from "@/components/lab-reports/ViewReportModal"
-import ShareReportModal from "@/components/lab-reports/ShareReportModal"
-
-// Types
-interface Report {
-  id: string
-  petId: string
-  petName: string
-  ownerName: string
-  testType: string
-  subType: string
-  date: string
-  status: string
-  reportType: string
-  results?: Record<string, any>
-  doctorName: string
-  shared: boolean
-  sharedVia: string[]
-  fileName?: string
-  appointmentId?: string
-  notes?: string
-}
-
-interface Filters {
-  petName: string
-  testType: string
-  status: string
-  dateRange: {
-    from: string
-    to: string
-  }
-}
-
-// Mock data
-const mockReports: Report[] = [
-  {
-    id: "RPT001",
-    petId: "PET001",
-    petName: "Max",
-    ownerName: "John Smith",
-    testType: "Blood Test",
-    subType: "CBC",
-    date: "2024-01-15",
-    status: "Completed",
-    reportType: "structured",
-    results: {
-      wbc: { value: 7.2, unit: "K/μL", range: "5.0-15.0", status: "normal" },
-      rbc: { value: 6.8, unit: "M/μL", range: "5.5-8.5", status: "normal" },
-      platelets: { value: 350, unit: "K/μL", range: "200-500", status: "normal" },
-    },
-    doctorName: "Dr. Smith",
-    shared: true,
-    sharedVia: ["email"],
-  },
-]
-
-export default function LabReportsPage() {
-  const [reports, setReports] = useState<Report[]>(mockReports)
-  const [filteredReports, setFilteredReports] = useState<Report[]>(mockReports)
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showAddTestModal, setShowAddTestModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
-  const [showShareModal, setShowShareModal] = useState(false)
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
-  const [showFilters, setShowFilters] = useState(false)
-
-  const handleFilterChange = (filters: Filters) => {
-    let filtered = reports
-
-    if (filters.petName) {
-      filtered = filtered.filter(
-        (report) =>
-          report.petName.toLowerCase().includes(filters.petName.toLowerCase()) ||
-          report.ownerName.toLowerCase().includes(filters.petName.toLowerCase()),
-      )
-    }
-
-    if (filters.testType && filters.testType !== "all") {
-      filtered = filtered.filter((report) => report.testType === filters.testType)
-    }
-
-    if (filters.status && filters.status !== "all") {
-      filtered = filtered.filter((report) => report.status === filters.status)
-    }
-
-    if (filters.dateRange.from) {
-      filtered = filtered.filter((report) => new Date(report.date) >= new Date(filters.dateRange.from))
-    }
-
-    if (filters.dateRange.to) {
-      filtered = filtered.filter((report) => new Date(report.date) <= new Date(filters.dateRange.to))
-    }
-
-    setFilteredReports(filtered)
-  }
-
-  const handleViewReport = (report: Report) => {
-    setSelectedReport(report)
-    setShowViewModal(true)
-  }
-
-  const handleShareReport = (report: Report) => {
-    setSelectedReport(report)
-    setShowShareModal(true)
-  }
-
-  const handleDownloadReport = (report: Report) => {
-    // Simulate PDF download
-    const link = document.createElement("a")
-    link.href = `/api/reports/${report.id}/download`
-    link.download = `${report.petName}_${report.testType}_${report.date}.pdf`
-    link.click()
-  }
-
-  const handleAddReport = (newReport: Partial<Report>) => {
-    const report: Report = {
-      id: `RPT${String(reports.length + 1).padStart(3, "0")}`,
-      date: new Date().toISOString().split("T")[0],
-      status: "Completed",
-      shared: false,
-      sharedVia: [],
-      ...newReport,
-    } as Report
-
-    setReports([report, ...reports])
-    setFilteredReports([report, ...filteredReports])
-  }
-
-  const stats = {
-    total: reports.length,
-    pending: reports.filter((r) => r.status === "Pending").length,
-    completed: reports.filter((r) => r.status === "Completed").length,
-    shared: reports.filter((r) => r.shared).length,
-  }
+export default function LabReportsPage({
+  searchParams
+}: {
+  searchParams: { status?: string; type?: string; search?: string }
+}) {
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Page Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lab & Reports</h1>
-          <p className="text-gray-600 mt-2">Manage lab reports and test results</p>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <FaFlask className="text-blue-600" />
+            Lab Reports
+          </h1>
+          <p className="text-gray-600 mt-1">Manage laboratory tests and results</p>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <FaFilter className="mr-2 h-4 w-4" />
-            Filters
-          </button>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <FaPlus className="mr-2 h-4 w-4" />
-            Upload Report
-          </button>
-          <button
-            onClick={() => setShowAddTestModal(true)}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <FaPlus className="mr-2 h-4 w-4" />
-            Add Test Result
-          </button>
-        </div>
+        <CreateLabReportModal />
       </div>
+
+      {/* Search and Filter Bar */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Input
+                  placeholder="Search by test name, patient, or lab..."
+                  defaultValue={searchParams.search || ""}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Select defaultValue={searchParams.status || "all"}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="ordered">Ordered</SelectItem>
+                  <SelectItem value="collected">Collected</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select defaultValue={searchParams.type || "all"}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Test Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="blood_work">Blood Work</SelectItem>
+                  <SelectItem value="urine_analysis">Urine Analysis</SelectItem>
+                  <SelectItem value="fecal_exam">Fecal Exam</SelectItem>
+                  <SelectItem value="skin_scraping">Skin Scraping</SelectItem>
+                  <SelectItem value="biopsy">Biopsy</SelectItem>
+                  <SelectItem value="x_ray">X-Ray</SelectItem>
+                  <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FaEye className="h-6 w-6 text-blue-600" />
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FaFlask className="text-blue-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">Total</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <LabReportStatsCard type="total" />
+                </Suspense>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Reports</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <FaEye className="h-6 w-6 text-yellow-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <FaClock className="text-yellow-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">Pending</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <LabReportStatsCard type="pending" />
+                </Suspense>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <FaEye className="h-6 w-6 text-green-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <FaMicroscope className="text-orange-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">In Progress</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <LabReportStatsCard type="inProgress" />
+                </Suspense>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <FaShare className="h-6 w-6 text-purple-600" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <FaCheckCircle className="text-green-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">Completed</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <LabReportStatsCard type="completed" />
+                </Suspense>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Shared</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.shared}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <FaFlask className="text-purple-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">Today</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <LabReportStatsCard type="today" />
+                </Suspense>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <FaExclamationTriangle className="text-red-600 text-lg" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-sm font-medium text-gray-900">Abnormal</h3>
+                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
+                  <LabReportStatsCard type="abnormal" />
+                </Suspense>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filters */}
-      {showFilters && (
-        <div>
-          <LabReportsFilters onFilterChange={handleFilterChange} />
-        </div>
-      )}
+      {/* Main Content */}
+      <Tabs defaultValue="all" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="all">All Reports</TabsTrigger>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+          <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="abnormal">Abnormal Results</TabsTrigger>
+        </TabsList>
 
-      {/* Reports List */}
-      <ReportsList
-        reports={filteredReports}
-        onViewReport={handleViewReport}
-        onShareReport={handleShareReport}
-        onDownloadReport={handleDownloadReport}
-      />
+        <TabsContent value="all" className="space-y-6">
+          <Suspense fallback={<LabReportsListSkeleton />}>
+            <LabReportsList filter="all" />
+          </Suspense>
+        </TabsContent>
 
-      {/* Modals */}
-      {showUploadModal && <UploadReportModal onClose={() => setShowUploadModal(false)} onSubmit={handleAddReport} />}
+        <TabsContent value="pending" className="space-y-6">
+          <Suspense fallback={<LabReportsListSkeleton />}>
+            <LabReportsList filter="pending" />
+          </Suspense>
+        </TabsContent>
 
-      {showAddTestModal && <AddTestResultModal onClose={() => setShowAddTestModal(false)} onSubmit={handleAddReport} />}
+        <TabsContent value="in_progress" className="space-y-6">
+          <Suspense fallback={<LabReportsListSkeleton />}>
+            <LabReportsList filter="in_progress" />
+          </Suspense>
+        </TabsContent>
 
-      {showViewModal && selectedReport && (
-        <ViewReportModal report={selectedReport} onClose={() => setShowViewModal(false)} />
-      )}
+        <TabsContent value="completed" className="space-y-6">
+          <Suspense fallback={<LabReportsListSkeleton />}>
+            <LabReportsList filter="completed" />
+          </Suspense>
+        </TabsContent>
 
-      {showShareModal && selectedReport && (
-        <ShareReportModal
-          report={selectedReport}
-          onClose={() => setShowShareModal(false)}
-          onShare={(method: string) => {
-            // Update report shared status
-            const updatedReports = reports.map((r) =>
-              r.id === selectedReport.id ? { ...r, shared: true, sharedVia: [...r.sharedVia, method] } : r,
-            )
-            setReports(updatedReports)
-            setFilteredReports(updatedReports)
-            setShowShareModal(false)
-          }}
-        />
-      )}
+        <TabsContent value="abnormal" className="space-y-6">
+          <Suspense fallback={<LabReportsListSkeleton />}>
+            <LabReportsList filter="abnormal" />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+async function LabReportStatsCard({ type }: { type: string }) {
+  const stats = await getLabReportStats()
+  
+  const getValue = () => {
+    switch (type) {
+      case "total":
+        return stats.totalReports.toString()
+      case "pending":
+        return stats.pendingReports.toString()
+      case "inProgress":
+        return stats.inProgressReports.toString()
+      case "completed":
+        return stats.completedReports.toString()
+      case "today":
+        return stats.todayReports.toString()
+      case "abnormal":
+        return stats.abnormalReports.toString()
+      default:
+        return "0"
+    }
+  }
+
+  return <p className="text-2xl font-bold text-gray-900">{getValue()}</p>
+}
+
+function LabReportsListSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[...Array(5)].map((_, i) => (
+        <Card key={i} className="animate-pulse">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+              <div className="space-y-2 flex-1">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+              </div>
+              <div className="flex gap-2">
+                <div className="h-8 bg-gray-200 rounded w-20"></div>
+                <div className="h-8 bg-gray-200 rounded w-16"></div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
