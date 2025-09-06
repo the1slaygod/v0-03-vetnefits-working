@@ -41,8 +41,8 @@ export function ClinicProvider({ children }: ClinicProviderProps) {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-        if (!supabaseUrl || !supabaseAnonKey) {
-          console.warn("Supabase environment variables not found. Using default clinic data.")
+        if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.includes('supabase.co')) {
+          console.warn("Supabase environment variables not configured properly. Using default clinic data.")
           return
         }
 
