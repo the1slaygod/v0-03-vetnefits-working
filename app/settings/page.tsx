@@ -63,14 +63,14 @@ async function getClinicSettings() {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const clinicId = "default-clinic-id"
+    const clinicId = "ff4a1430-f7df-49b8-99bf-2240faa8d622"
 
     // Get clinic settings
     const { data: settingsData } = await supabase.from("clinic_settings").select("*").eq("clinic_id", clinicId).single()
 
     // Get staff data
     const { data: staffData } = await supabase
-      .from("clinic_staff")
+      .from("staff")
       .select("*")
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false })

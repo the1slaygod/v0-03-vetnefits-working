@@ -12,7 +12,7 @@ export async function saveSettings(formData: FormData) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const clinicId = "default-clinic-id"
+    const clinicId = "ff4a1430-f7df-49b8-99bf-2240faa8d622"
 
     const settingsData = {
       clinic_name: formData.get("clinic_name") as string,
@@ -57,7 +57,7 @@ export async function addStaff(formData: FormData) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
-    const clinicId = "default-clinic-id"
+    const clinicId = "ff4a1430-f7df-49b8-99bf-2240faa8d622"
 
     const staffData = {
       clinic_id: clinicId,
@@ -67,7 +67,7 @@ export async function addStaff(formData: FormData) {
       status: "active",
     }
 
-    const { error } = await supabase.from("clinic_staff").insert(staffData)
+    const { error } = await supabase.from("staff").insert(staffData)
 
     if (error) {
       console.error("Supabase error:", error)
@@ -94,7 +94,7 @@ export async function toggleStaffStatus(staffId: string, currentStatus: string) 
     const newStatus = currentStatus === "active" ? "inactive" : "active"
 
     const { error } = await supabase
-      .from("clinic_staff")
+      .from("staff")
       .update({ status: newStatus })
       .eq("id", staffId)
 
@@ -121,7 +121,7 @@ export async function deleteStaff(staffId: string) {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-    const { error } = await supabase.from("clinic_staff").delete().eq("id", staffId)
+    const { error } = await supabase.from("staff").delete().eq("id", staffId)
 
     if (error) {
       console.error("Supabase error:", error)
