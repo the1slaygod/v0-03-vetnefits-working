@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FaClock, FaExclamationTriangle, FaPlay, FaCheck, FaTimes, FaUser, FaPaw, FaEdit } from "react-icons/fa"
+import { Clock, AlertTriangle, Play, Check, X, User, Cat, Edit } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -137,7 +137,7 @@ export default function WaitingListQueue({ filter }: WaitingListQueueProps) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <FaClock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {filter === "completed" ? "No completed entries today" : "No patients in queue"}
           </h3>
@@ -230,7 +230,7 @@ function WaitingListEntryCard({
             )}
             
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-              <FaPaw className="text-gray-600" />
+              <Cat className="text-gray-600" />
             </div>
             
             <div className="flex-1 min-w-0">
@@ -239,7 +239,7 @@ function WaitingListEntryCard({
                   {entry.patient_name} - {entry.pet_name}
                 </h3>
                 <Badge className={getPriorityBadge(entry.priority)}>
-                  {entry.priority === "urgent" && <FaExclamationTriangle className="w-3 h-3 mr-1" />}
+                  {entry.priority === "urgent" && <AlertTriangle className="w-3 h-3 mr-1" />}
                   {entry.priority}
                 </Badge>
                 <Badge className={getStatusBadge(entry.status)}>
@@ -249,16 +249,16 @@ function WaitingListEntryCard({
               
               <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
                 <span className="flex items-center gap-1">
-                  <FaUser className="w-3 h-3" />
+                  <User className="w-3 h-3" />
                   {entry.species}
                 </span>
                 <span className="flex items-center gap-1">
-                  <FaClock className="w-3 h-3" />
+                  <Clock className="w-3 h-3" />
                   Checked in: {formatTime(entry.checked_in_at)}
                 </span>
                 {!isCompleted && (
                   <span className="flex items-center gap-1 text-orange-600">
-                    <FaClock className="w-3 h-3" />
+                    <Clock className="w-3 h-3" />
                     Waiting: {getWaitTime()}min
                   </span>
                 )}
@@ -299,7 +299,7 @@ function WaitingListEntryCard({
                   size="sm"
                   onClick={() => onStatusChange(entry.id, "in_progress")}
                 >
-                  <FaPlay className="w-4 h-4 mr-2" />
+                  <Play className="w-4 h-4 mr-2" />
                   Call
                 </Button>
               )}
@@ -310,7 +310,7 @@ function WaitingListEntryCard({
                   size="sm"
                   onClick={() => onStatusChange(entry.id, "completed")}
                 >
-                  <FaCheck className="w-4 h-4 mr-2" />
+                  <Check className="w-4 h-4 mr-2" />
                   Complete
                 </Button>
               )}
@@ -320,7 +320,7 @@ function WaitingListEntryCard({
                 size="sm"
                 onClick={() => onRemove(entry.id)}
               >
-                <FaTimes className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </Button>
             </div>
           )}

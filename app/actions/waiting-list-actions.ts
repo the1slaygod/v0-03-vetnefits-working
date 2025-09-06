@@ -25,7 +25,7 @@ export interface WaitingListEntry {
   // Joined fields
   patient_name?: string
   pet_name?: string
-  pet_species?: string
+  species?: string
   appointment_time?: string
 }
 

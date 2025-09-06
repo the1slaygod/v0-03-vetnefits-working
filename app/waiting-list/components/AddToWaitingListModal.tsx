@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { FaPlus, FaUser, FaPaw, FaSpinner } from "react-icons/fa"
+import { Plus, User, Cat, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -83,14 +83,14 @@ export default function AddToWaitingListModal() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="flex items-center gap-2">
-          <FaPlus />
+          <Plus className="w-4 h-4" />
           Add to Waiting List
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FaUser className="text-blue-600" />
+            <User className="w-5 h-5 text-blue-600" />
             Add Patient to Waiting List
           </DialogTitle>
           <DialogDescription>
@@ -198,7 +198,7 @@ export default function AddToWaitingListModal() {
             <Button type="submit" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <FaSpinner className="animate-spin mr-2" />
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Adding...
                 </>
               ) : (
