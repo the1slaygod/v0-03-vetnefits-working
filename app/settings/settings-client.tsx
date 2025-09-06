@@ -76,6 +76,7 @@ export default function SettingsClient({
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showAddStaff, setShowAddStaff] = useState(false)
+  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const { toast } = useToast()
@@ -239,13 +240,73 @@ export default function SettingsClient({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="clinic_logo">Clinic Logo URL</Label>
-                    <Input
-                      id="clinic_logo"
-                      name="clinic_logo"
-                      defaultValue={settings.clinic_logo}
-                      placeholder="Enter logo URL"
-                    />
+                    <Label htmlFor="clinic_logo">Clinic Logo</Label>
+                    <div className="mt-1 space-y-3">
+                      <div className="flex items-center gap-4">
+                        <img 
+                          src={settings.clinic_logo} 
+                          alt="Clinic logo" 
+                          className="w-20 h-20 object-cover rounded-lg border"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/images/clinic-logo.png"
+                          }}
+                        />
+                        <div className="flex-1">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setSelectedLogoFile(e.target.files?.[0] || null)}
+                            className="hidden"
+                            id="logo-upload"
+                          />
+                          <Label htmlFor="logo-upload" className="cursor-pointer">
+                            <Button variant="outline" size="sm" type="button" asChild>
+                              <span>Upload Image</span>
+                            </Button>
+                          </Label>
+                          {selectedLogoFile && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-sm text-gray-600">{selectedLogoFile.name}</span>
+                              <Button 
+                                size="sm" 
+                                onClick={async () => {
+                                  if (!selectedLogoFile) return
+                                  const formData = new FormData()
+                                  formData.append('logo', selectedLogoFile)
+                                  
+                                  startTransition(async () => {
+                                    const { uploadLogo } = await import('./actions')
+                                    const result = await uploadLogo(formData)
+                                    
+                                    if (result.success) {
+                                      setSettings(prev => ({ ...prev, clinic_logo: result.logo_url || prev.clinic_logo }))
+                                      setSelectedLogoFile(null)
+                                      window.location.reload()
+                                    }
+                                    
+                                    toast({
+                                      title: result.success ? "Success" : "Error",
+                                      description: result.message,
+                                      variant: result.success ? "default" : "destructive",
+                                    })
+                                  })
+                                }}
+                                disabled={isPending}
+                              >
+                                {isPending ? "Uploading..." : "Save"}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Input
+                        id="clinic_logo"
+                        name="clinic_logo"
+                        defaultValue={settings.clinic_logo}
+                        placeholder="Or enter logo URL directly"
+                        className="text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div>

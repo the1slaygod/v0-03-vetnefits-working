@@ -25,7 +25,7 @@ interface ClinicProviderProps {
 
 export function ClinicProvider({ children }: ClinicProviderProps) {
   const [clinicData, setClinicData] = useState<ClinicContextType>({
-    clinicId: "default-clinic-id",
+    clinicId: "ff4a1430-f7df-49b8-99bf-2240faa8d622",
     clinicName: "Vetnefits Animal Hospital",
     clinicEmail: "admin@vetnefits.com",
     clinicPhone: "+91 98765 43210",
@@ -52,7 +52,7 @@ export function ClinicProvider({ children }: ClinicProviderProps) {
         const { data: clinicInfo, error } = await supabase
           .from("clinics")
           .select("*")
-          .eq("id", "default-clinic-id")
+          .eq("id", "ff4a1430-f7df-49b8-99bf-2240faa8d622")
           .single()
 
         if (error) {
