@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
+import { useClinicContext } from "@/lib/supabase-realtime"
 
 interface ClinicSettings {
   clinic_name: string
@@ -80,10 +81,34 @@ export default function SettingsClient({
   const [isPending, startTransition] = useTransition()
 
   const { toast } = useToast()
+  const clinicContext = useClinicContext()
 
   const handleSaveSettings = async (formData: FormData) => {
     startTransition(async () => {
       const result = await saveSettings(formData)
+      
+      if (result.success) {
+        // Update local settings state
+        const updatedSettings = {
+          ...settings,
+          clinic_name: formData.get("clinic_name") as string,
+          clinic_phone: formData.get("clinic_phone") as string,
+          clinic_email: formData.get("clinic_email") as string,
+          clinic_address: formData.get("clinic_address") as string,
+        }
+        setSettings(updatedSettings)
+        
+        // Update global clinic context
+        if (clinicContext?.updateClinicData) {
+          clinicContext.updateClinicData({
+            clinicName: updatedSettings.clinic_name,
+            clinicPhone: updatedSettings.clinic_phone,
+            clinicEmail: updatedSettings.clinic_email,
+            clinicAddress: updatedSettings.clinic_address,
+          })
+        }
+      }
+      
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,

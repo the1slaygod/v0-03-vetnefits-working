@@ -11,6 +11,7 @@ interface ClinicContextType {
   clinicAddress: string
   clinicLogo: string
   supabase: SupabaseClient | null
+  updateClinicData: (data: Partial<Omit<ClinicContextType, 'supabase' | 'updateClinicData'>>) => void
 }
 
 const ClinicContext = createContext<ClinicContextType | null>(null)
@@ -32,6 +33,9 @@ export function ClinicProvider({ children }: ClinicProviderProps) {
     clinicAddress: "123 Pet Street, Animal City, AC 12345",
     clinicLogo: "/images/clinic-logo.png",
     supabase: null,
+    updateClinicData: (data) => {
+      setClinicData(prev => ({ ...prev, ...data }))
+    }
   })
 
   useEffect(() => {
@@ -59,7 +63,8 @@ export function ClinicProvider({ children }: ClinicProviderProps) {
           console.warn("Could not fetch clinic data:", error.message)
           // Continue with default data
         } else if (clinicInfo) {
-          setClinicData({
+          setClinicData(prev => ({
+            ...prev,
             clinicId: clinicInfo.id,
             clinicName: clinicInfo.name,
             clinicEmail: clinicInfo.email,
@@ -67,7 +72,7 @@ export function ClinicProvider({ children }: ClinicProviderProps) {
             clinicAddress: clinicInfo.address,
             clinicLogo: clinicInfo.logo || "/images/clinic-logo.png",
             supabase,
-          })
+          }))
           return
         }
 
