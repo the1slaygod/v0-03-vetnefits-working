@@ -9,6 +9,7 @@ import { useClinicContext } from "@/lib/supabase-realtime"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import GlobalSearch from "./GlobalSearch"
 
 interface TopBarProps {
   onMenuToggle: () => void
@@ -71,20 +72,9 @@ export default function TopBar({ onMenuToggle, onSidebarToggle, isMobileMenuOpen
           </div>
         </div>
 
-        {/* Center Section - Search Bar */}
+        {/* Center Section - Global Search */}
         <div className="flex-1 max-w-md mx-4">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                type="text"
-                placeholder="Search patients, pets, or records..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </form>
+          <GlobalSearch />
         </div>
 
         {/* Right Section - Notifications and User Menu */}
