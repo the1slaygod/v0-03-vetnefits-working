@@ -1,170 +1,209 @@
-import { Suspense } from "react"
-import { FaClock, FaPlus, FaUsers, FaExclamationTriangle, FaPlay, FaChartBar } from "react-icons/fa"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getWaitingList, getWaitingListStats } from "@/app/actions/waiting-list-actions"
-import WaitingListQueue from "./components/WaitingListQueue"
-import AddToWaitingListModal from "./components/AddToWaitingListModal"
+"use client"
 
-export default function WaitingListPage() {
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <FaClock className="text-blue-600" />
-            Waiting List
-          </h1>
-          <p className="text-gray-600 mt-1">Manage patient queue and waiting times</p>
+import { useState } from "react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { WhiteboardToolbar } from "./components/WhiteboardToolbar"
+import { WhiteboardTable } from "./components/WhiteboardTable"
+import { ImprovedAddToWaitingListModal } from "./components/ImprovedAddToWaitingListModal"
+import { useWhiteboard } from "./hooks/useWhiteboard"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Clock, Users, Activity, CheckCircle, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+
+// Create a query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000,
+      refetchOnWindowFocus: true
+    }
+  }
+})
+
+function WhiteboardContent() {
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const {
+    rows,
+    filters,
+    setFilters,
+    isLoading,
+    error,
+    updateStatus,
+    uploadPhoto,
+    addToWaitingList,
+    stats
+  } = useWhiteboard()
+
+  const handleAddToWaitingList = async (data: {
+    patient_id: string
+    pet_id: string
+    priority: "low" | "normal" | "high" | "urgent"
+    reason: string
+    notes?: string
+    estimated_duration?: number
+  }) => {
+    try {
+      await addToWaitingList(data)
+      toast.success("Patient added to waiting list successfully!")
+    } catch (error) {
+      console.error("Add to waiting list error:", error)
+      toast.error("Failed to add patient to waiting list")
+      throw error
+    }
+  }
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      await updateStatus(id, status)
+    } catch (error) {
+      console.error("Status change error:", error)
+      toast.error("Failed to update status")
+    }
+  }
+
+  const containerClass = isFullscreen
+    ? "fixed inset-0 z-50 bg-white overflow-auto"
+    : "p-6 max-w-full mx-auto"
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 text-lg font-semibold mb-2">Failed to load whiteboard</div>
+          <div className="text-red-500 text-sm">{error.message}</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Reload Page
+          </button>
         </div>
-        <AddToWaitingListModal />
       </div>
+    )
+  }
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FaUsers className="text-blue-600 text-lg" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Waiting</h3>
-                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
-                  <WaitingListStatsCard type="waiting" />
-                </Suspense>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <FaPlay className="text-green-600 text-lg" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">In Progress</h3>
-                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
-                  <WaitingListStatsCard type="inProgress" />
-                </Suspense>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <FaExclamationTriangle className="text-red-600 text-lg" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Urgent</h3>
-                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
-                  <WaitingListStatsCard type="urgent" />
-                </Suspense>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FaChartBar className="text-orange-600 text-lg" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Avg Wait</h3>
-                <Suspense fallback={<div className="text-gray-600">Loading...</div>}>
-                  <WaitingListStatsCard type="avgWait" />
-                </Suspense>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <Tabs defaultValue="queue" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="queue">Current Queue</TabsTrigger>
-          <TabsTrigger value="completed">Completed Today</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="queue" className="space-y-6">
-          <Suspense fallback={<WaitingListQueueSkeleton />}>
-            <WaitingListQueue filter="active" />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="completed" className="space-y-6">
-          <Suspense fallback={<WaitingListQueueSkeleton />}>
-            <WaitingListQueue filter="completed" />
-          </Suspense>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
+  return (
+    <div className={containerClass}>
+      {/* Stats Row */}
+      {!isFullscreen && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 px-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Waiting List Analytics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-gray-500 py-8">
-                <FaChartBar className="mx-auto text-4xl mb-4" />
-                <p>Analytics dashboard coming soon</p>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Total Patients</div>
+                  <div className="text-xl font-bold text-gray-900">{stats.total}</div>
+                </div>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-yellow-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Waiting</div>
+                  <div className="text-xl font-bold text-gray-900">{stats.waiting}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Attending</div>
+                  <div className="text-xl font-bold text-gray-900">{stats.attending}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Completed</div>
+                  <div className="text-xl font-bold text-gray-900">{stats.completed}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <WhiteboardToolbar
+        filters={filters}
+        onFiltersChange={setFilters}
+        onAddPatient={() => {}} // Handled by modal
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+      />
+
+      {/* Main Content */}
+      <div className="px-6 pb-6">
+        {isLoading ? (
+          <div className="bg-white rounded-lg border p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-500">Loading patient whiteboard...</p>
+          </div>
+        ) : (
+          <>
+            {/* Status Summary */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Patient Queue
+                </h2>
+                <div className="flex items-center space-x-2">
+                  {stats.waiting > 0 && (
+                    <Badge className="bg-yellow-100 text-yellow-800">
+                      {stats.waiting} waiting
+                    </Badge>
+                  )}
+                  {stats.attending > 0 && (
+                    <Badge className="bg-red-100 text-red-800">
+                      {stats.attending} attending
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              <ImprovedAddToWaitingListModal onAdd={handleAddToWaitingList} />
+            </div>
+
+            {/* Whiteboard Table */}
+            <WhiteboardTable
+              data={rows}
+              onStatusChange={handleStatusChange}
+              onPhotoUpload={uploadPhoto}
+            />
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
-async function WaitingListStatsCard({ type }: { type: string }) {
-  const stats = await getWaitingListStats()
-  
-  const getValue = () => {
-    switch (type) {
-      case "waiting":
-        return stats.waitingCount.toString()
-      case "inProgress":
-        return stats.inProgressCount.toString()
-      case "urgent":
-        return stats.urgentCount.toString()
-      case "avgWait":
-        return stats.avgWaitTime > 0 ? `${Math.round(stats.avgWaitTime)}min` : "N/A"
-      default:
-        return "0"
-    }
-  }
-
-  return <p className="text-2xl font-bold text-gray-900">{getValue()}</p>
-}
-
-function WaitingListQueueSkeleton() {
+export default function WaitingListPage() {
   return (
-    <div className="space-y-4">
-      {[...Array(5)].map((_, i) => (
-        <Card key={i} className="animate-pulse">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-              <div className="space-y-2 flex-1">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-              <div className="h-8 bg-gray-200 rounded w-20"></div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <WhiteboardContent />
+    </QueryClientProvider>
   )
 }
