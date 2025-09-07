@@ -35,10 +35,10 @@ export async function getWaitingList() {
     const result = await client.query(`
       SELECT 
         wl.*,
-        p.first_name || ' ' || p.last_name as patient_name,
+        p.name as patient_name,
         pet.name as pet_name,
         pet.species,
-        a.appointment_date || ' ' || a.appointment_time as appointment_time
+        a.appointment_date as appointment_time
       FROM waiting_list wl
       LEFT JOIN patients p ON wl.patient_id = p.id
       LEFT JOIN pets pet ON wl.pet_id = pet.id
