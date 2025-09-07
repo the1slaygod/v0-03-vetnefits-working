@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         FROM appointments a
         LEFT JOIN patients p ON a.patient_id = p.id
         LEFT JOIN pets pet ON a.pet_id = pet.id
-        LEFT JOIN staff ON a.provider_id = staff.id
+        LEFT JOIN staff ON a.provider_id::text = staff.id::text
         WHERE 1=1
       `
       
