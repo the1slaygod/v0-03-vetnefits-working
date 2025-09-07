@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Camera, Phone } from "lucide-react"
+import { Clock, Camera, Phone, DollarSign } from "lucide-react"
 import { WhiteboardRow } from "../types"
 
 interface WhiteboardTableProps {
@@ -110,7 +110,7 @@ export function WhiteboardTable({ data, onStatusChange, onPhotoUpload }: Whitebo
               <th className="px-3 py-2 text-left font-medium text-gray-900">Provider</th>
               <th className="px-3 py-2 text-left font-medium text-gray-900">Waiting Time</th>
               <th className="px-3 py-2 text-left font-medium text-gray-900">Turnaround</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-900">Invoices</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-900">Billing</th>
               <th className="px-3 py-2 text-left font-medium text-gray-900">Sno</th>
             </tr>
           </thead>
@@ -247,11 +247,20 @@ export function WhiteboardTable({ data, onStatusChange, onPhotoUpload }: Whitebo
                   </span>
                 </td>
 
-                {/* Today's Invoices */}
+                {/* Billing */}
                 <td className="px-3 py-2">
-                  <button className="text-blue-600 hover:text-blue-800 text-xs">
-                    ${row.invoices}
-                  </button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // TODO: Open billing interface
+                      console.log("Opening billing for patient:", row.client)
+                    }}
+                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800"
+                    title="Open Billing"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                  </Button>
                 </td>
 
                 {/* Serial Number */}
