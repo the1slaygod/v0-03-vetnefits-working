@@ -1,205 +1,115 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useClinicContext } from "@/lib/supabase-realtime"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
-  FaTachometerAlt,
-  FaPaw,
-  FaCalendarAlt,
-  FaBoxes,
-  FaFileInvoiceDollar,
-  FaBed,
-  FaFlask,
-  FaSyringe,
-  FaShoppingCart,
-  FaClock,
-  FaClipboardCheck,
-  FaStickyNote,
-  FaCog,
-  FaChevronDown,
-  FaChevronRight,
-  FaTimes,
-} from "react-icons/fa"
+  Calendar,
+  Users,
+  FileText,
+  Package,
+  DollarSign,
+  Settings,
+  Home,
+  Stethoscope,
+  ClipboardList,
+  TestTube,
+  Shield,
+  Pill,
+  UserPlus,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react"
 
 interface SidebarProps {
-  isCollapsed: boolean
-  isMobile: boolean
-  mobileMenuOpen: boolean
-  onMobileMenuClose: () => void
+  isOpen: boolean
+  onClose: () => void
 }
 
-interface MenuItem {
+interface NavItem {
   name: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-  badge?: string
-  children?: MenuItem[]
+  badge?: number
+  children?: NavItem[]
 }
 
-export default function Sidebar({ isCollapsed, isMobile, mobileMenuOpen, onMobileMenuClose }: SidebarProps) {
+const navigation: NavItem[] = [
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Appointments", href: "/appointments", icon: Calendar, badge: 5 },
+  { name: "Patients", href: "/patients", icon: Users },
+  { name: "Pets", href: "/pets", icon: Stethoscope },
+  { name: "EMR", href: "/emr", icon: FileText },
+  { name: "Lab Reports", href: "/lab-reports", icon: TestTube },
+  { name: "Inventory", href: "/inventory", icon: Package },
+  { name: "Billing", href: "/billing", icon: DollarSign },
+  { name: "Vaccines", href: "/vaccines", icon: Pill },
+  { name: "OTC", href: "/otc", icon: ClipboardList },
+  { name: "Compliance", href: "/compliance", icon: Shield },
+  { name: "Admissions", href: "/admissions", icon: UserPlus },
+  { name: "Waiting List", href: "/waiting-list", icon: Clock },
+  { name: "Misc", href: "/misc", icon: FileText },
+  { name: "Settings", href: "/settings", icon: Settings },
+]
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const clinicContext = useClinicContext()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   const toggleExpanded = (itemName: string) => {
     setExpandedItems((prev) =>
-      prev.includes(itemName) ? prev.filter((item) => item !== itemName) : [...prev, itemName],
+      prev.includes(itemName) ? prev.filter((name) => name !== itemName) : [...prev, itemName],
     )
   }
 
-  const menuItems: MenuItem[] = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: FaTachometerAlt,
-    },
-    {
-      name: "Patients",
-      href: "/patients",
-      icon: FaPaw,
-    },
-    {
-      name: "Appointments",
-      href: "/appointments",
-      icon: FaCalendarAlt,
-    },
-    {
-      name: "EMR",
-      href: "/emr",
-      icon: FaFlask,
-    },
-    {
-      name: "Admissions",
-      href: "/admissions",
-      icon: FaBed,
-    },
-    {
-      name: "Inventory",
-      href: "/inventory",
-      icon: FaBoxes,
-    },
-    {
-      name: "Billing",
-      href: "/billing",
-      icon: FaFileInvoiceDollar,
-    },
-    {
-      name: "Lab Reports",
-      href: "/lab-reports",
-      icon: FaFlask,
-    },
-    ...(clinicContext?.modules?.vaccines
-      ? [
-          {
-            name: "Vaccines",
-            href: "/vaccines",
-            icon: FaSyringe,
-          },
-        ]
-      : []),
-    ...(clinicContext?.modules?.otc_billing
-      ? [
-          {
-            name: "OTC Sales",
-            href: "/otc",
-            icon: FaShoppingCart,
-          },
-        ]
-      : []),
-    {
-      name: "Waiting List",
-      href: "/waiting-list",
-      icon: FaClock,
-    },
-    ...(clinicContext?.modules?.compliance
-      ? [
-          {
-            name: "Compliance",
-            href: "/compliance",
-            icon: FaClipboardCheck,
-          },
-        ]
-      : []),
-    {
-      name: "Miscellaneous",
-      href: "/misc",
-      icon: FaStickyNote,
-    },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: FaCog,
-    },
-  ]
-
-  const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard"
-    }
-    return pathname.startsWith(href)
-  }
-
-  const renderMenuItem = (item: MenuItem, level = 0) => {
-    const hasChildren = item.children && item.children.length > 0
+  const renderNavItem = (item: NavItem, depth = 0) => {
+    const isActive = pathname === item.href
     const isExpanded = expandedItems.includes(item.name)
-    const active = isActive(item.href)
+    const hasChildren = item.children && item.children.length > 0
 
     return (
       <div key={item.name}>
-        <div
-          className={`
-            flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors
-            ${active ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-gray-100"}
-            ${isCollapsed && !isMobile ? "justify-center" : ""}
-            ${level > 0 ? "ml-4" : ""}
-          `}
-        >
-          {hasChildren ? (
-            <button
-              onClick={() => toggleExpanded(item.name)}
-              className="flex items-center w-full"
-              disabled={isCollapsed && !isMobile}
-            >
-              <item.icon className={`${isCollapsed && !isMobile ? "h-5 w-5" : "h-4 w-4 mr-3"}`} />
-              {(!isCollapsed || isMobile) && (
-                <>
-                  <span className="flex-1 text-left">{item.name}</span>
-                  {item.badge && (
-                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-2">{item.badge}</span>
-                  )}
-                  {isExpanded ? (
-                    <FaChevronDown className="h-3 w-3 ml-2" />
-                  ) : (
-                    <FaChevronRight className="h-3 w-3 ml-2" />
-                  )}
-                </>
-              )}
-            </button>
-          ) : (
-            <Link
-              href={item.href}
-              onClick={isMobile ? onMobileMenuClose : undefined}
-              className="flex items-center w-full"
-            >
-              <item.icon className={`${isCollapsed && !isMobile ? "h-5 w-5" : "h-4 w-4 mr-3"}`} />
-              {(!isCollapsed || isMobile) && (
-                <>
-                  <span className="flex-1">{item.name}</span>
-                  {item.badge && (
-                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-2">{item.badge}</span>
-                  )}
-                </>
-              )}
-            </Link>
+        <Link
+          href={item.href}
+          onClick={onClose}
+          className={cn(
+            "flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            depth > 0 && "ml-4",
+            isActive
+              ? "bg-blue-100 text-blue-700 border-r-2 border-blue-700"
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
           )}
-        </div>
-
-        {/* Render children if expanded */}
-        {hasChildren && isExpanded && (!isCollapsed || isMobile) && (
-          <div className="ml-4 mt-1 space-y-1">{item.children!.map((child) => renderMenuItem(child, level + 1))}</div>
+        >
+          <div className="flex items-center">
+            <item.icon className={cn("mr-3 h-5 w-5", isActive ? "text-blue-700" : "text-gray-400")} />
+            <span>{item.name}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {item.badge && (
+              <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full">{item.badge}</span>
+            )}
+            {hasChildren && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault()
+                  toggleExpanded(item.name)
+                }}
+                className="p-0 h-auto"
+              >
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+        </Link>
+        {hasChildren && isExpanded && (
+          <div className="mt-1 space-y-1">{item.children?.map((child) => renderNavItem(child, depth + 1))}</div>
         )}
       </div>
     )
@@ -207,37 +117,44 @@ export default function Sidebar({ isCollapsed, isMobile, mobileMenuOpen, onMobil
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside
-        className={`
-          fixed top-16 left-0 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 z-30 transition-all duration-300 overflow-hidden
-          ${isMobile ? "hidden" : "block"}
-          ${isCollapsed ? "w-16" : "w-64"}
-        `}
-      >
-        <div className="p-4 h-full overflow-y-auto overflow-x-hidden">
-          <nav className="space-y-2">{menuItems.map((item) => renderMenuItem(item))}</nav>
-        </div>
-      </aside>
+      {/* Mobile overlay */}
+      {isOpen && <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />}
 
-      {/* Mobile Sidebar */}
-      <aside
-        className={`
-          fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300 overflow-hidden
-          ${isMobile ? "block" : "hidden"}
-          ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}
-        `}
+      {/* Sidebar */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        )}
       >
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
-          <button onClick={onMobileMenuClose} className="p-2 rounded-md hover:bg-gray-100">
-            <FaTimes className="w-4 h-4" />
-          </button>
+        <div className="flex flex-col h-full">
+          {/* Sidebar header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center space-x-2">
+              <Stethoscope className="h-6 w-6 text-blue-600" />
+              <span className="text-lg font-semibold text-gray-900">Vetnefits</span>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+            {navigation.map((item) => renderNavItem(item))}
+          </nav>
+
+          {/* Sidebar footer */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-blue-600">VH</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">Vetnefits Hospital</p>
+                <p className="text-xs text-gray-500 truncate">Premium Plan</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="p-4 h-full overflow-y-auto overflow-x-hidden">
-          <nav className="space-y-2">{menuItems.map((item) => renderMenuItem(item))}</nav>
-        </div>
-      </aside>
+      </div>
     </>
   )
 }

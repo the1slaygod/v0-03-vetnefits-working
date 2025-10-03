@@ -1,12 +1,7 @@
 "use server"
 
+import { createServerClient } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
-import { Pool } from "pg"
-
-// Use direct PostgreSQL connection for server actions
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-})
 
 export interface Patient {
   id: string
@@ -78,70 +73,6 @@ export async function getAllPatients(): Promise<Patient[]> {
     return data || []
   } catch (error) {
     console.error("Error in getAllPatients:", error)
-    return []
-  }
-}
-
-export interface PatientWithPets {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-  address?: string
-  pets: {
-    id: string
-    name: string
-    species: string
-    breed?: string
-    age?: number
-    gender?: string
-    weight?: number
-    color?: string
-    photo?: string
-  }[]
-}
-
-export async function getAllPatientsWithPets(): Promise<PatientWithPets[]> {
-  try {
-    const query = `
-      SELECT 
-        p.id,
-        p.name,
-        p.email,
-        p.phone,
-        p.address,
-        COALESCE(
-          json_agg(
-            json_build_object(
-              'id', pt.id,
-              'name', pt.name,
-              'species', pt.species,
-              'breed', pt.breed,
-              'age', pt.age,
-              'gender', pt.gender,
-              'weight', pt.weight,
-              'color', pt.color,
-              'photo', pt.photo
-            )
-          ) FILTER (WHERE pt.id IS NOT NULL), 
-          '[]'::json
-        ) as pets
-      FROM patients p
-      LEFT JOIN pets pt ON p.id = pt.patient_id
-      WHERE p.clinic_id = $1
-      GROUP BY p.id, p.name, p.email, p.phone, p.address
-      ORDER BY p.name
-    `
-
-    const client = await pool.connect()
-    try {
-      const result = await client.query(query, ["ff4a1430-f7df-49b8-99bf-2240faa8d622"])
-      return result.rows
-    } finally {
-      client.release()
-    }
-  } catch (error) {
-    console.error("Error in getAllPatientsWithPets:", error)
     return []
   }
 }

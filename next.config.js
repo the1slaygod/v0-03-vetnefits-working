@@ -7,24 +7,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
-  },
-  // Allow all hosts for Replit proxy environment
-  async rewrites() {
-    return []
-  },
-  async headers() {
-    return [
+    domains: ["localhost"],
+    remotePatterns: [
       {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-        ],
+        protocol: "https",
+        hostname: "**",
       },
-    ]
+    ],
+    unoptimized: true,
   },
 }
 

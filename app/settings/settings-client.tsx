@@ -1,114 +1,72 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import {
-  FaClinicMedical,
-  FaCreditCard,
-  FaUsers,
-  FaPalette,
-  FaCogs,
-  FaEye,
-  FaEyeSlash,
-  FaCheck,
-  FaTimes,
-  FaPlus,
-  FaTrash,
-} from "react-icons/fa"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
-import { useClinicContext } from "@/lib/supabase-realtime"
-
-interface ClinicSettings {
-  clinic_name: string
-  clinic_phone: string
-  clinic_email: string
-  clinic_address: string
-  clinic_logo: string
-  subscription_status: "active" | "inactive" | "trial"
-  subscription_plan: "monthly" | "yearly"
-  subscription_valid_till: string
-  theme: "light" | "dark"
-  default_view: "dashboard" | "appointments" | "admit"
-  modules: {
-    vaccines: boolean
-    compliance: boolean
-    lab_reports: boolean
-    otc_billing: boolean
-  }
-}
+import { Switch } from "@/components/ui/switch"
+import { FaPlus, FaTrash, FaToggleOn, FaToggleOff } from "react-icons/fa"
+import { useToast } from "@/hooks/use-toast"
+import { saveClinicSettings, saveModuleSettings, addStaffMember, toggleStaffStatus, deleteStaffMember } from "./actions"
 
 interface StaffMember {
   id: string
   name: string
   email: string
-  role: "doctor" | "receptionist" | "admin"
-  status: "active" | "inactive"
-  created_at: string
+  role: string
+  phone: string
+  isActive: boolean
 }
 
-interface SettingsClientProps {
-  initialSettings: ClinicSettings
-  initialStaff: StaffMember[]
-  saveSettings: (formData: FormData) => Promise<{ success: boolean; message: string }>
-  addStaff: (formData: FormData) => Promise<{ success: boolean; message: string }>
-  toggleStaffStatus: (staffId: string, currentStatus: string) => Promise<{ success: boolean; message: string }>
-  deleteStaff: (staffId: string) => Promise<{ success: boolean; message: string }>
-}
-
-export default function SettingsClient({
-  initialSettings,
-  initialStaff,
-  saveSettings,
-  addStaff,
-  toggleStaffStatus,
-  deleteStaff,
-}: SettingsClientProps) {
-  const [activeTab, setActiveTab] = useState("clinic")
-  const [settings, setSettings] = useState<ClinicSettings>(initialSettings)
-  const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
-  const [showPassword, setShowPassword] = useState(false)
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [showAddStaff, setShowAddStaff] = useState(false)
-  const [selectedLogoFile, setSelectedLogoFile] = useState<File | null>(null)
-  const [isPending, startTransition] = useTransition()
-
+export default function SettingsClient() {
   const { toast } = useToast()
-  const clinicContext = useClinicContext()
+  const [isPending, startTransition] = useTransition()
+  const [showAddStaff, setShowAddStaff] = useState(false)
 
-  const handleSaveSettings = async (formData: FormData) => {
+  // Mock staff data
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([
+    {
+      id: "1",
+      name: "Dr. Sarah Johnson",
+      email: "sarah@vetnefits.com",
+      role: "Veterinarian",
+      phone: "+1 (555) 123-4567",
+      isActive: true,
+    },
+    {
+      id: "2",
+      name: "Mike Wilson",
+      email: "mike@vetnefits.com",
+      role: "Veterinary Technician",
+      phone: "+1 (555) 234-5678",
+      isActive: true,
+    },
+    {
+      id: "3",
+      name: "Lisa Chen",
+      email: "lisa@vetnefits.com",
+      role: "Receptionist",
+      phone: "+1 (555) 345-6789",
+      isActive: false,
+    },
+  ])
+
+  const handleClinicSettingsSubmit = async (formData: FormData) => {
     startTransition(async () => {
-      const result = await saveSettings(formData)
-      
-      if (result.success) {
-        // Update local settings state
-        const updatedSettings = {
-          ...settings,
-          clinic_name: formData.get("clinic_name") as string,
-          clinic_phone: formData.get("clinic_phone") as string,
-          clinic_email: formData.get("clinic_email") as string,
-          clinic_address: formData.get("clinic_address") as string,
-        }
-        setSettings(updatedSettings)
-        
-        // Update global clinic context
-        if (clinicContext?.updateClinicData) {
-          clinicContext.updateClinicData({
-            clinicName: updatedSettings.clinic_name,
-            clinicPhone: updatedSettings.clinic_phone,
-            clinicEmail: updatedSettings.clinic_email,
-            clinicAddress: updatedSettings.clinic_address,
-          })
-        }
-      }
-      
+      const result = await saveClinicSettings(formData)
+      toast({
+        title: result.success ? "Success" : "Error",
+        description: result.message,
+        variant: result.success ? "default" : "destructive",
+      })
+    })
+  }
+
+  const handleModuleSettingsSubmit = async (formData: FormData) => {
+    startTransition(async () => {
+      const result = await saveModuleSettings(formData)
       toast({
         title: result.success ? "Success" : "Error",
         description: result.message,
@@ -119,11 +77,19 @@ export default function SettingsClient({
 
   const handleAddStaff = async (formData: FormData) => {
     startTransition(async () => {
-      const result = await addStaff(formData)
+      const result = await addStaffMember(formData)
       if (result.success) {
         setShowAddStaff(false)
-        // Refresh the page to show new staff member
-        window.location.reload()
+        // Add to local state for demo
+        const newStaff: StaffMember = {
+          id: Date.now().toString(),
+          name: formData.get("name") as string,
+          email: formData.get("email") as string,
+          role: formData.get("role") as string,
+          phone: formData.get("phone") as string,
+          isActive: true,
+        }
+        setStaffMembers((prev) => [...prev, newStaff])
       }
       toast({
         title: result.success ? "Success" : "Error",
@@ -133,14 +99,12 @@ export default function SettingsClient({
     })
   }
 
-  const handleToggleStaffStatus = async (staffId: string, currentStatus: string) => {
+  const handleToggleStaff = async (staffId: string, currentStatus: boolean) => {
     startTransition(async () => {
-      const result = await toggleStaffStatus(staffId, currentStatus)
+      const result = await toggleStaffStatus(staffId, !currentStatus)
       if (result.success) {
-        setStaff((prev) =>
-          prev.map((member) =>
-            member.id === staffId ? { ...member, status: currentStatus === "active" ? "inactive" : "active" } : member,
-          ),
+        setStaffMembers((prev) =>
+          prev.map((staff) => (staff.id === staffId ? { ...staff, isActive: !currentStatus } : staff)),
         )
       }
       toast({
@@ -155,9 +119,9 @@ export default function SettingsClient({
     if (!confirm("Are you sure you want to delete this staff member?")) return
 
     startTransition(async () => {
-      const result = await deleteStaff(staffId)
+      const result = await deleteStaffMember(staffId)
       if (result.success) {
-        setStaff((prev) => prev.filter((member) => member.id !== staffId))
+        setStaffMembers((prev) => prev.filter((staff) => staff.id !== staffId))
       }
       toast({
         title: result.success ? "Success" : "Error",
@@ -167,181 +131,60 @@ export default function SettingsClient({
     })
   }
 
-  const changePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // This would typically integrate with your auth system
-    toast({
-      title: "Info",
-      description: "Password change functionality requires auth integration",
-    })
-  }
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your clinic settings and preferences</p>
+        <p className="text-gray-600">Manage your clinic settings and preferences</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="clinic" className="flex items-center space-x-2">
-            <FaClinicMedical className="w-4 h-4" />
-            <span>Clinic</span>
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="flex items-center space-x-2">
-            <FaCreditCard className="w-4 h-4" />
-            <span>Billing</span>
-          </TabsTrigger>
-          <TabsTrigger value="access" className="flex items-center space-x-2">
-            <FaUsers className="w-4 h-4" />
-            <span>Access</span>
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="flex items-center space-x-2">
-            <FaPalette className="w-4 h-4" />
-            <span>Appearance</span>
-          </TabsTrigger>
-          <TabsTrigger value="modules" className="flex items-center space-x-2">
-            <FaCogs className="w-4 h-4" />
-            <span>Modules</span>
-          </TabsTrigger>
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="modules">Modules</TabsTrigger>
+          <TabsTrigger value="staff">Staff</TabsTrigger>
         </TabsList>
 
-        {/* Clinic Profile Settings */}
-        <TabsContent value="clinic">
+        <TabsContent value="general">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <FaClinicMedical className="mr-2" />
-                Clinic Profile
-              </CardTitle>
+              <CardTitle>Clinic Information</CardTitle>
+              <CardDescription>Update your clinic's basic information</CardDescription>
             </CardHeader>
             <CardContent>
-              <form action={handleSaveSettings} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="clinic_name">Clinic Name</Label>
+              <form action={handleClinicSettingsSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="clinicName">Clinic Name</Label>
                     <Input
-                      id="clinic_name"
-                      name="clinic_name"
-                      defaultValue={settings.clinic_name}
+                      id="clinicName"
+                      name="clinicName"
+                      defaultValue="Vetnefits Animal Hospital"
                       placeholder="Enter clinic name"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="clinic_phone">Phone Number</Label>
-                    <Input
-                      id="clinic_phone"
-                      name="clinic_phone"
-                      defaultValue={settings.clinic_phone}
-                      placeholder="Enter phone number"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="clinic_email">Email</Label>
-                    <Input
-                      id="clinic_email"
-                      name="clinic_email"
-                      type="email"
-                      defaultValue={settings.clinic_email}
-                      placeholder="Enter email address"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="clinic_logo">Clinic Logo</Label>
-                    <div className="mt-1 space-y-3">
-                      <div className="flex items-center gap-4">
-                        <img 
-                          src={settings.clinic_logo} 
-                          alt="Clinic logo" 
-                          className="w-20 h-20 object-cover rounded-lg border"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/images/clinic-logo.png"
-                          }}
-                        />
-                        <div className="flex-1">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setSelectedLogoFile(e.target.files?.[0] || null)}
-                            className="hidden"
-                            id="logo-upload"
-                          />
-                          <Label htmlFor="logo-upload" className="cursor-pointer">
-                            <Button variant="outline" size="sm" type="button" asChild>
-                              <span>Upload Image</span>
-                            </Button>
-                          </Label>
-                          {selectedLogoFile && (
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-sm text-gray-600">{selectedLogoFile.name}</span>
-                              <Button 
-                                size="sm" 
-                                onClick={async () => {
-                                  if (!selectedLogoFile) return
-                                  const formData = new FormData()
-                                  formData.append('logo', selectedLogoFile)
-                                  
-                                  startTransition(async () => {
-                                    const { uploadLogo } = await import('./actions')
-                                    const result = await uploadLogo(formData)
-                                    
-                                    if (result.success) {
-                                      setSettings(prev => ({ ...prev, clinic_logo: result.logo_url || prev.clinic_logo }))
-                                      setSelectedLogoFile(null)
-                                      window.location.reload()
-                                    }
-                                    
-                                    toast({
-                                      title: result.success ? "Success" : "Error",
-                                      description: result.message,
-                                      variant: result.success ? "default" : "destructive",
-                                    })
-                                  })
-                                }}
-                                disabled={isPending}
-                              >
-                                {isPending ? "Uploading..." : "Save"}
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <Input
-                        id="clinic_logo"
-                        name="clinic_logo"
-                        defaultValue={settings.clinic_logo}
-                        placeholder="Or enter logo URL directly"
-                        className="text-sm"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input id="phone" name="phone" defaultValue="+1 (555) 123-4567" placeholder="Enter phone number" />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="clinic_address">Address</Label>
-                  <Textarea
-                    id="clinic_address"
-                    name="clinic_address"
-                    defaultValue={settings.clinic_address}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    defaultValue="admin@vetnefits.com"
+                    placeholder="Enter email address"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    defaultValue="123 Pet Street, Animal City, AC 12345"
                     placeholder="Enter clinic address"
-                    rows={3}
                   />
                 </div>
                 <Button type="submit" disabled={isPending}>
@@ -352,321 +195,142 @@ export default function SettingsClient({
           </Card>
         </TabsContent>
 
-        {/* Subscription & Billing */}
-        <TabsContent value="billing">
+        <TabsContent value="modules">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <FaCreditCard className="mr-2" />
-                Subscription & Billing
-              </CardTitle>
+              <CardTitle>Module Settings</CardTitle>
+              <CardDescription>Enable or disable specific modules for your clinic</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <Label>Subscription Status</Label>
-                  <div className="mt-2">
-                    <Badge
-                      variant={
-                        settings.subscription_status === "active"
-                          ? "default"
-                          : settings.subscription_status === "trial"
-                            ? "secondary"
-                            : "destructive"
-                      }
-                    >
-                      {settings.subscription_status.toUpperCase()}
-                    </Badge>
+            <CardContent>
+              <form action={handleModuleSettingsSubmit} className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="vaccines">Vaccines Module</Label>
+                    <p className="text-sm text-gray-500">Manage vaccination schedules and records</p>
                   </div>
+                  <Switch id="vaccines" name="vaccines" defaultChecked />
                 </div>
-                <div>
-                  <Label>Plan</Label>
-                  <p className="mt-2 font-medium capitalize">{settings.subscription_plan}</p>
-                </div>
-                <div>
-                  <Label>Valid Till</Label>
-                  <p className="mt-2 font-medium">
-                    {settings.subscription_valid_till
-                      ? new Date(settings.subscription_valid_till).toLocaleDateString("en-IN")
-                      : "N/A"}
-                  </p>
-                </div>
-              </div>
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium mb-4">Payment History</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">Yearly Subscription</p>
-                      <p className="text-sm text-gray-600">Jan 15, 2024</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">₹29,999</p>
-                      <Badge variant="default">Paid</Badge>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="otcBilling">OTC Billing</Label>
+                    <p className="text-sm text-gray-500">Over-the-counter sales and billing</p>
                   </div>
+                  <Switch id="otcBilling" name="otcBilling" defaultChecked />
                 </div>
-              </div>
-              <div className="flex space-x-4">
-                <Button>Renew Subscription</Button>
-                <Button variant="outline">Download Invoice</Button>
-              </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="compliance">Compliance Module</Label>
+                    <p className="text-sm text-gray-500">Regulatory compliance and reporting</p>
+                  </div>
+                  <Switch id="compliance" name="compliance" defaultChecked />
+                </div>
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Saving..." : "Save Module Settings"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Account & Access */}
-        <TabsContent value="access">
+        <TabsContent value="staff">
           <div className="space-y-6">
-            {/* Change Password */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Change Password</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="new_password">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="new_password"
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                    >
-                      {showPassword ? <FaEyeSlash /> : <FaEye />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="confirm_password">Confirm Password</Label>
-                  <Input
-                    id="confirm_password"
-                    type={showPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm new password"
-                  />
-                </div>
-                <Button onClick={changePassword}>Change Password</Button>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">Staff Management</h3>
+                <p className="text-sm text-gray-500">Manage your clinic staff members</p>
+              </div>
+              <Button onClick={() => setShowAddStaff(true)}>
+                <FaPlus className="w-4 h-4 mr-2" />
+                Add Staff
+              </Button>
+            </div>
 
-            {/* Staff Management */}
+            {showAddStaff && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Add New Staff Member</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form action={handleAddStaff} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input id="name" name="name" placeholder="Enter full name" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" name="email" type="email" placeholder="Enter email" required />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="role">Role</Label>
+                        <Input id="role" name="role" placeholder="e.g., Veterinarian, Technician" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input id="phone" name="phone" placeholder="Enter phone number" required />
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button type="submit" disabled={isPending}>
+                        {isPending ? "Adding..." : "Add Staff Member"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setShowAddStaff(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center">
-                    <FaUsers className="mr-2" />
-                    Staff Management
-                  </span>
-                  <Button onClick={() => setShowAddStaff(true)}>
-                    <FaPlus className="mr-2 w-4 h-4" />
-                    Add Staff
-                  </Button>
-                </CardTitle>
+                <CardTitle>Current Staff</CardTitle>
               </CardHeader>
               <CardContent>
-                {showAddStaff && (
-                  <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-                    <h4 className="font-medium mb-4">Add New Staff Member</h4>
-                    <form action={handleAddStaff}>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="staff_name">Name</Label>
-                          <Input id="staff_name" name="name" placeholder="Enter name" required />
-                        </div>
-                        <div>
-                          <Label htmlFor="staff_email">Email</Label>
-                          <Input id="staff_email" name="email" type="email" placeholder="Enter email" required />
-                        </div>
-                        <div>
-                          <Label htmlFor="staff_role">Role</Label>
-                          <select
-                            id="staff_role"
-                            name="role"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                            required
-                          >
-                            <option value="receptionist">Receptionist</option>
-                            <option value="doctor">Doctor</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2 mt-4">
-                        <Button type="submit" disabled={isPending}>
-                          {isPending ? "Adding..." : "Add Staff"}
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setShowAddStaff(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                )}
-
                 <div className="space-y-4">
-                  {staff.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{member.name}</p>
-                        <p className="text-sm text-gray-600">{member.email}</p>
-                        <Badge variant="outline" className="mt-1">
-                          {member.role}
-                        </Badge>
+                  {staffMembers.map((staff) => (
+                    <div key={staff.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{staff.name}</h4>
+                        <p className="text-sm text-gray-500">{staff.role}</p>
+                        <p className="text-sm text-gray-500">
+                          {staff.email} • {staff.phone}
+                        </p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant={member.status === "active" ? "default" : "secondary"}>{member.status}</Badge>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            staff.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {staff.isActive ? "Active" : "Inactive"}
+                        </span>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleToggleStaffStatus(member.id, member.status)}
+                          onClick={() => handleToggleStaff(staff.id, staff.isActive)}
                           disabled={isPending}
                         >
-                          {member.status === "active" ? <FaTimes /> : <FaCheck />}
+                          {staff.isActive ? <FaToggleOff className="w-4 h-4" /> : <FaToggleOn className="w-4 h-4" />}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteStaff(member.id)}
-                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteStaff(staff.id)}
                           disabled={isPending}
                         >
-                          <FaTrash />
+                          <FaTrash className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
                   ))}
-                  {staff.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <FaUsers className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No staff members added yet</p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        {/* Appearance */}
-        <TabsContent value="appearance">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FaPalette className="mr-2" />
-                Appearance Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form action={handleSaveSettings} className="space-y-6">
-                <div>
-                  <Label>Theme</Label>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <label className="flex items-center space-x-2">
-                      <input type="radio" name="theme" value="light" defaultChecked={settings.theme === "light"} />
-                      <span>Light</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input type="radio" name="theme" value="dark" defaultChecked={settings.theme === "dark"} />
-                      <span>Dark</span>
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <Label>Default View</Label>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        name="default_view"
-                        value="dashboard"
-                        defaultChecked={settings.default_view === "dashboard"}
-                      />
-                      <span>Dashboard</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        name="default_view"
-                        value="appointments"
-                        defaultChecked={settings.default_view === "appointments"}
-                      />
-                      <span>Appointments</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        name="default_view"
-                        value="admit"
-                        defaultChecked={settings.default_view === "admit"}
-                      />
-                      <span>Admit Screen</span>
-                    </label>
-                  </div>
-                </div>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Module Toggles */}
-        <TabsContent value="modules">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FaCogs className="mr-2" />
-                Module Settings
-              </CardTitle>
-              <p className="text-sm text-gray-600">Enable or disable modules for your clinic</p>
-            </CardHeader>
-            <CardContent>
-              <form action={handleSaveSettings} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">Vaccine Module</h3>
-                      <p className="text-sm text-gray-600">Manage pet vaccinations and schedules</p>
-                    </div>
-                    <Switch name="modules_vaccines" defaultChecked={settings.modules.vaccines} />
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">Compliance</h3>
-                      <p className="text-sm text-gray-600">Track compliance and regulatory requirements</p>
-                    </div>
-                    <Switch name="modules_compliance" defaultChecked={settings.modules.compliance} />
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">Lab Reports</h3>
-                      <p className="text-sm text-gray-600">Manage laboratory test results</p>
-                    </div>
-                    <Switch name="modules_lab_reports" defaultChecked={settings.modules.lab_reports} />
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h3 className="font-medium">OTC Billing</h3>
-                      <p className="text-sm text-gray-600">Over-the-counter sales and billing</p>
-                    </div>
-                    <Switch name="modules_otc_billing" defaultChecked={settings.modules.otc_billing} />
-                  </div>
-                </div>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

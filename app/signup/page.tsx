@@ -1,350 +1,206 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { FaUser, FaLock, FaEnvelope, FaBuilding, FaPhone, FaMapMarkerAlt, FaSpinner, FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { signUp } from "@/app/actions/auth-actions"
-import { toast } from "sonner"
+import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa"
 
-export default function SignUpPage() {
+export default function SignupPage() {
   const [formData, setFormData] = useState({
-    // Personal Info
-    name: "",
+    displayName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    // Clinic Info
-    clinicName: "",
-    clinicEmail: "",
-    clinicPhone: "",
-    clinicAddress: ""
   })
-  const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [activeTab, setActiveTab] = useState("personal")
-  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Validation
-    const requiredFields = ['name', 'email', 'password', 'confirmPassword', 'clinicName', 'clinicEmail', 'clinicPhone', 'clinicAddress']
-    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData])
-    
-    if (missingFields.length > 0) {
-      toast.error("Please fill in all required fields")
-      return
-    }
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match")
+      setError("Passwords do not match")
       return
     }
 
-    if (formData.password.length < 8) {
-      toast.error("Password must be at least 8 characters long")
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters")
       return
     }
 
-    setIsLoading(true)
-    
-    try {
-      const result = await signUp({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name,
-        clinicName: formData.clinicName,
-        clinicEmail: formData.clinicEmail,
-        clinicPhone: formData.clinicPhone,
-        clinicAddress: formData.clinicAddress
-      })
-      
-      if (result.success) {
-        toast.success("Account created successfully! Welcome to Vetnefits!")
-        router.push("/dashboard")
-      } else {
-        toast.error(result.error || "Failed to create account")
-      }
-    } catch (error) {
-      console.error("Signup error:", error)
-      toast.error("An unexpected error occurred")
-    } finally {
-      setIsLoading(false)
-    }
+    setLoading(true)
+    setError("")
+
+    // Simulate signup
+    setTimeout(() => {
+      setLoading(false)
+      window.location.href = "/dashboard"
+    }, 1000)
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const handleGoogleSignup = async () => {
+    setLoading(true)
+    setTimeout(() => {
+      setLoading(false)
+      window.location.href = "/dashboard"
+    }, 1000)
   }
-
-  const isPersonalComplete = formData.name && formData.email && formData.password && formData.confirmPassword
-  const isClinicComplete = formData.clinicName && formData.clinicEmail && formData.clinicPhone && formData.clinicAddress
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-2xl">
-        {/* Logo and Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center">
             <span className="text-white text-2xl font-bold">V</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome to Vetnefits</h1>
-          <p className="text-gray-600 mt-2">Create your clinic account and start managing your practice</p>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create your account</h2>
+          <p className="mt-2 text-sm text-gray-600">Join Vetnefits and manage your veterinary practice</p>
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
-            <CardDescription className="text-center">
-              Set up your personal account and clinic information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit}>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="personal" className="flex items-center gap-2">
-                    {isPersonalComplete && <FaCheckCircle className="text-green-500" />}
-                    Personal Info
-                  </TabsTrigger>
-                  <TabsTrigger value="clinic" className="flex items-center gap-2">
-                    {isClinicComplete && <FaCheckCircle className="text-green-500" />}
-                    Clinic Info
-                  </TabsTrigger>
-                </TabsList>
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">{error}</div>
+          )}
 
-                <TabsContent value="personal" className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
-                      <div className="relative">
-                        <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          placeholder="Dr. John Smith"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <input
+                id="displayName"
+                name="displayName"
+                type="text"
+                required
+                value={formData.displayName}
+                onChange={handleChange}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Enter your full name"
+              />
+            </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
-                      <div className="relative">
-                        <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="john.smith@email.com"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Enter your email"
+              />
+            </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password *</Label>
-                      <div className="relative">
-                        <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          value={formData.password}
-                          onChange={handleInputChange}
-                          placeholder="Minimum 8 characters"
-                          className="pl-10 pr-10"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showPassword ? <FaEyeSlash /> : <FaEye />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                      <div className="relative">
-                        <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={formData.confirmPassword}
-                          onChange={handleInputChange}
-                          placeholder="Confirm your password"
-                          className="pl-10 pr-10"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button 
-                      type="button" 
-                      onClick={() => setActiveTab("clinic")}
-                      disabled={!isPersonalComplete}
-                    >
-                      Next: Clinic Info
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="clinic" className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="clinicName">Clinic Name *</Label>
-                      <div className="relative">
-                        <FaBuilding className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="clinicName"
-                          name="clinicName"
-                          value={formData.clinicName}
-                          onChange={handleInputChange}
-                          placeholder="Happy Paws Veterinary Clinic"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="clinicEmail">Clinic Email *</Label>
-                      <div className="relative">
-                        <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="clinicEmail"
-                          name="clinicEmail"
-                          type="email"
-                          value={formData.clinicEmail}
-                          onChange={handleInputChange}
-                          placeholder="info@happypaws.com"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="clinicPhone">Clinic Phone *</Label>
-                      <div className="relative">
-                        <FaPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                        <Input
-                          id="clinicPhone"
-                          name="clinicPhone"
-                          type="tel"
-                          value={formData.clinicPhone}
-                          onChange={handleInputChange}
-                          placeholder="+1 (555) 123-4567"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="clinicAddress">Clinic Address *</Label>
-                      <div className="relative">
-                        <FaMapMarkerAlt className="absolute left-3 top-3 text-gray-400" />
-                        <Textarea
-                          id="clinicAddress"
-                          name="clinicAddress"
-                          value={formData.clinicAddress}
-                          onChange={handleInputChange}
-                          placeholder="123 Main Street&#10;Anytown, ST 12345&#10;United States"
-                          className="pl-10 resize-none"
-                          rows={3}
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between">
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setActiveTab("personal")}
-                    >
-                      Back
-                    </Button>
-                    
-                    <Button
-                      type="submit"
-                      disabled={isLoading || !isPersonalComplete || !isClinicComplete}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {isLoading ? (
-                        <>
-                          <FaSpinner className="animate-spin mr-2" />
-                          Creating Account...
-                        </>
-                      ) : (
-                        "Create Account"
-                      )}
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </form>
-
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Already have an account?</span>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <Link href="/login">
-                  <Button variant="outline" className="w-full">
-                    Sign In Instead
-                  </Button>
-                </Link>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <FaEyeSlash className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <FaEye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>© 2024 Vetnefits. All rights reserved.</p>
-          <div className="mt-2 space-x-4">
-            <Link href="/privacy" className="hover:text-blue-600">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-blue-600">Terms of Service</Link>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <FaEyeSlash className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <FaEye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Creating account..." : "Create account"}
+              </button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={loading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FaGoogle className="h-5 w-5 text-red-500 mr-2" />
+                Sign up with Google
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link href="/" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign in
+              </Link>
+            </p>
           </div>
         </div>
       </div>
